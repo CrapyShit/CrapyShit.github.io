@@ -346,6 +346,16 @@ a.gtile:hover b{text-decoration:underline;text-decoration-color:var(--accent);te
 
 /* Japanese headings fall back to the mono face, which sits taller: give them more line height. */
 html:lang(ja) h1.disp{line-height:1.2}
+
+/* Software logos next to their names: the PNG in the current theme's ink shows, the other hides. */
+.soft{display:inline-flex;flex-wrap:wrap;align-items:center;gap:.35rem 1rem}
+.soft-i{display:inline-flex;align-items:center;gap:.45em;white-space:nowrap}
+.soft-ic{width:1.05em;height:1.05em;flex:none;object-fit:contain}
+li.soft{justify-content:center}
+.soft-ic--d{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .soft-ic--l{display:none}:root:not([data-theme="light"]) .soft-ic--d{display:inline}}
+:root[data-theme="dark"] .soft-ic--l{display:none}
+:root[data-theme="dark"] .soft-ic--d{display:inline}
 </style>
 
 <header class="hdr" id="hdr">
@@ -428,7 +438,7 @@ html:lang(ja) h1.disp{line-height:1.2}
         <div class="strip">
           <p class="strip-h label" id="works" data-i18n="side.works">Works in</p>
           <ul role="list" aria-labelledby="works" style="display:contents">
-            <li class="disp">Maya</li><li class="disp">Unreal Engine 5</li><li class="disp">Python</li><li class="disp">Control Rig</li>
+            <li class="disp" data-soft="Maya">Maya</li><li class="disp" data-soft="Unreal Engine 5">Unreal Engine 5</li><li class="disp" data-soft="Python">Python</li><li class="disp">Control Rig</li>
           </ul>
         </div>
 
@@ -458,7 +468,7 @@ html:lang(ja) h1.disp{line-height:1.2}
           <h2 class="label" id="cr-h" data-i18n="cr.title" style="margin-bottom:1.2rem">Credits</h2>
           <dl class="roll">
             <div><dt data-i18n="cr.r1">Rigging and tools</dt><dd>Jeff Kharrat</dd></div>
-            <div><dt data-i18n="cr.r2">Software</dt><dd>Autodesk Maya, Unreal Engine 5, Python</dd></div>
+            <div><dt data-i18n="cr.r2">Software</dt><dd data-soft="Autodesk Maya, Unreal Engine 5, Python">Autodesk Maya, Unreal Engine 5, Python</dd></div>
           </dl>
         </section>
         <nav class="c-site" aria-labelledby="st-h">
@@ -538,7 +548,7 @@ html:lang(ja) h1.disp{line-height:1.2}
           </div>
         </section>
         <section class="ab-col">
-          <div class="grp"><h2 class="label" data-i18n="ab.soft">Software</h2><p>Maya, Unreal Engine, Python, Blender, Photoshop</p></div>
+          <div class="grp"><h2 class="label" data-i18n="ab.soft">Software</h2><p data-soft="Maya, Unreal Engine, Python, Blender, Photoshop">Maya, Unreal Engine, Python, Blender, Photoshop</p></div>
           <div class="grp">
             <h2 class="label" data-i18n="ab.lang">Languages</h2>
             <ul class="plain"><li data-i18n="ab.fr">French, native</li><li data-i18n="ab.en">English, professional (TOEIC 885)</li><li data-i18n="ab.ja">Japanese, intermediate (JLPT N4)</li></ul>
@@ -922,11 +932,23 @@ function renderWork() {
     d.append(mk('div', 'slot slot--sq'), cap); li.append(d); ul.append(li);
   }
 }
+/* Software names get their logo: official marks from the Simple Icons set, one PNG per theme ink. */
+const LOGO = { 'maya': 'maya', 'autodesk maya': 'maya', 'unreal engine': 'unreal', 'unreal engine 5': 'unreal', 'python': 'python', 'blender': 'blender' };
+function softify(node, list) {
+  node.textContent = ''; node.classList.add('soft');
+  list.split(',').map(s => s.trim()).filter(Boolean).forEach(name => {
+    const item = mk('span', 'soft-i'), key = LOGO[name.toLowerCase()];
+    if (key) ['l', 'd'].forEach(t => { const i = mk('img', 'soft-ic soft-ic--' + t); i.src = 'media/logos/' + key + '-' + t + '.png'; i.alt = ''; i.width = i.height = 32; item.append(i); });
+    item.append(name); node.append(item);
+  });
+}
+$$('[data-soft]').forEach(n => softify(n, n.dataset.soft));
+
 function renderProject(p) {
   $('#pj-title').textContent = L(p.title);
   const facts = $('#pj-facts'); facts.textContent = '';
   [['pj.type', L(p.kind)], ['pj.year', p.year], ['pj.role', L(p.role)], ['pj.soft', p.software.join(', ')]].filter(([, v]) => v).forEach(([k, v]) => {
-    const d = mk('div'); d.append(mk('dt', '', tr(k)), mk('dd', '', v)); facts.append(d);
+    const d = mk('div'), dd = mk('dd', '', v); if (k === 'pj.soft') softify(dd, v); d.append(mk('dt', '', tr(k)), dd); facts.append(d);
   });
   $('#pj-sum').textContent = L(p.summary);
   const box = $('#pj-media'); box.textContent = '';
