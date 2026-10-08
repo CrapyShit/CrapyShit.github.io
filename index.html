@@ -729,7 +729,7 @@ const tr = k => (T[lang] && T[lang][k]) ?? T.en[k] ?? k;
 const POOL_L = 'ABCDEFGHKLMNPRSTUVXYZ0123456789/<>[]#';
 const POOL_J = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホ';
 function scramble(el) {
-  if (still.matches || el._sc) return;
+  if (el._sc) return;   // a text swap, not movement: kept even with reduced motion
   el._sc = true; el._txt = el.textContent;
   const n0 = el._txt.length, t0 = performance.now(), dur = Math.min(560, 200 + n0 * 16);
   el.classList.add('is-glitch');
@@ -929,6 +929,21 @@ function show(name) {
 }
 const labelOf = name => { const p = projOf(name); return p ? L(p.title) : name === 'home' ? tr('home') : tr(PAGES[name] ? PAGES[name].key : 'nav.' + name); };
 let wiping = false;
+/* Reduced-motion version of the page change: a short cross-fade instead of the block wipe. */
+function fade(mid) {
+  wiping = true;
+  const el = $('#wipe'), cv = $('canvas', el);
+  cv.hidden = true; $('#wipe-t').textContent = '';
+  Object.assign(el.style, { background: 'var(--ground)', opacity: '0', transition: 'opacity .16s linear' });
+  el.hidden = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.style.opacity = '1';
+    setTimeout(() => {
+      mid(); el.style.opacity = '0';
+      setTimeout(() => { el.hidden = true; el.removeAttribute('style'); cv.hidden = false; wiping = false; }, 180);
+    }, 180);
+  }));
+}
 function wipe(label, mid, acc) {
   wiping = true;
   const el = $('#wipe'), cv = $('canvas', el), ctx = cv.getContext('2d'), lab = $('#wipe-t');
@@ -966,7 +981,7 @@ function go(name, quiet) {
   if (!quiet) { try { history.pushState(null, '', '#' + name); } catch (e) { /* sandboxed: no history */ } }
   const next = ACCENTS[(accentI + 1) % ACCENTS.length];
   const swap = () => { accentI = (accentI + 1) % ACCENTS.length; setAccent(next); show(name); };
-  if (still.matches) { swap(); return; }
+  if (still.matches) { fade(swap); return; }
   wipe(labelOf(name), swap, ACC[next][isDark() ? 1 : 0]);
 }
 addEventListener('popstate', () => go(location.hash.slice(1), true));
