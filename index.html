@@ -289,7 +289,8 @@ dialog::backdrop{background:color-mix(in srgb,var(--tile) 62%,transparent)}
 .cards{display:grid;gap:1.4rem}
 .slot--sq,.fill--sq{aspect-ratio:1}
 .fill{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;border:1px solid var(--line);background:var(--tile)}
-.fill--wide{aspect-ratio:16/9}
+.fill.fill--wide{aspect-ratio:16/9}
+.fill.fill--sq{aspect-ratio:1}
 
 /* ---------- work: a grid of project tiles, one per grid column ---------- */
 .pg-head{display:grid;gap:1.25rem;padding:clamp(2rem,5vw,4.5rem) var(--pad) var(--pad);background:var(--ground);border-bottom:1px solid var(--line)}
@@ -608,6 +609,16 @@ const SITE = {
 const CATS = ['rigs', 'animation', 'tools'];
 
 const PROJECTS = [
+  { id: 'fighting', cat: 'animation', year: '', thumb: 'media/fighting/thumb.jpg',
+    title: { en: 'Fighting', ja: 'ファイティング' },
+    kind: { en: 'Body mechanics exercise', ja: 'ボディメカニクス練習' },
+    role: { en: 'Animation', ja: 'アニメーション' },
+    software: ['Maya'],
+    summary: { en: 'Body mechanics exercise inspired by the performance of the incredible David Torok and Jade Xu 徐慧慧. Using the very ergonomic rigs from Ramon Arango.',
+      ja: 'David Torok と Jade Xu 徐慧慧 の素晴らしいパフォーマンスに着想を得たボディメカニクスの練習。Ramon Arango 氏による非常に扱いやすいリグを使用。' },
+    media: [
+      { label: { en: 'Animation', ja: 'アニメーション' }, src: 'media/fighting/fighting.mp4' },
+      { label: { en: 'Reference', ja: 'リファレンス' }, src: 'media/fighting/fighting-reference.mp4' }] },
   { id: 'creature-rig', cat: 'rigs', year: '2025', thumb: '',
     title: { en: 'Creature rig', ja: 'クリーチャーリグ' },
     kind: { en: "Master's project", ja: '修士制作' },
@@ -878,7 +889,7 @@ function frame(src, shape, quiet, alt) {
   if (!src) return mk('div', 'slot slot--' + shape, { sq: '1:1', wide: '16:9', clip: '16:10' }[shape] + ' [' + tr('slot.todo') + ']');
   const video = /\.(mp4|webm|mov)$/i.test(src), n = mk(video ? 'video' : 'img', 'fill fill--' + shape);
   n.src = src;
-  if (video) { n.muted = true; n.loop = true; n.playsInline = true; if (quiet) n.autoplay = true; else n.controls = true; } else n.alt = alt || '';
+  if (video) { n.muted = true; n.loop = true; n.playsInline = true; n.autoplay = true; if (!quiet) n.controls = true; } else n.alt = alt || '';
   return n;
 }
 function link(node, route) { node.href = '#' + route; node.dataset.route = route; return node; }
@@ -901,7 +912,7 @@ function renderWork() {
   const list = PROJECTS.filter(p => filter === 'all' || p.cat === filter);
   list.forEach(p => {
     const li = mk('li'), a = link(mk('a', 'gtile'), 'p-' + p.id), cap = mk('span', 'gcap');
-    cap.append(mk('b', '', L(p.title)), mk('span', 'label', L(p.kind) + ', ' + p.year));
+    cap.append(mk('b', '', L(p.title)), mk('span', 'label', [L(p.kind), p.year].filter(Boolean).join(', ')));
     a.append(frame(p.thumb, 'sq', true, L(p.title)), cap); li.append(a); ul.append(li);
   });
   const pad = filter === 'all' ? SITE.emptyTiles : Math.max(4, list.length);
@@ -914,7 +925,7 @@ function renderWork() {
 function renderProject(p) {
   $('#pj-title').textContent = L(p.title);
   const facts = $('#pj-facts'); facts.textContent = '';
-  [['pj.type', L(p.kind)], ['pj.year', p.year], ['pj.role', L(p.role)], ['pj.soft', p.software.join(', ')]].forEach(([k, v]) => {
+  [['pj.type', L(p.kind)], ['pj.year', p.year], ['pj.role', L(p.role)], ['pj.soft', p.software.join(', ')]].filter(([, v]) => v).forEach(([k, v]) => {
     const d = mk('div'); d.append(mk('dt', '', tr(k)), mk('dd', '', v)); facts.append(d);
   });
   $('#pj-sum').textContent = L(p.summary);
