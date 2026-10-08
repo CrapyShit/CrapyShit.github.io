@@ -236,8 +236,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .links a,.links span{display:inline-flex;align-items:center;gap:.5rem;min-height:2.4rem;text-decoration:none;width:max-content;max-width:100%}
 .links svg{width:.7rem;height:.7rem;flex:none}
 .links .todo{color:var(--ink-2)}
-.sign{overflow:hidden;padding-block:clamp(1rem,2vw,2rem)!important}
-.sign p{font-size:clamp(2.6rem,12.6vw,14rem);white-space:nowrap}
+/* The closing name is sized to the width of its own box, so it always fits whatever the rails and screen are. */
+.sign{overflow:hidden;padding-block:clamp(1rem,2vw,2rem)!important;container-type:inline-size}
+.sign p{font-size:clamp(2rem,9.5vw,12rem);font-size:calc(100cqi / 8);white-space:nowrap}
 .foot{display:flex;flex-wrap:wrap;align-items:center;gap:.8rem 1.6rem;border-bottom:0!important;font-size:.8125rem}
 .foot .push{margin-left:auto}
 @media (min-width:64rem){
@@ -594,14 +595,18 @@ html:lang(ja) h1.disp{line-height:1.2}
    All four stage loops must share one camera, one frame count and one frame rate. */
 const SITE = {
   email: 'jeanfkh@gmail.com',
-  links: [['LinkedIn', ''], ['ArtStation', ''], ['Vimeo', ''], ['X', ''], ['GitHub', '']],
+  links: [['LinkedIn', 'https://www.linkedin.com/in/jean-fran%C3%A7ois-kharrat/'], ['ArtStation', 'https://www.artstation.com/jeanfkh'],
+    ['YouTube', 'https://youtube.com/@jfk4852'], ['GitHub', 'https://github.com/CrapyShit']],
   media: { shaded: '', wire: '', skeleton: '', controls: '', reel: '' },
   cv: '',          // path to your CV PDF
   emptyTiles: 8    // the Work page pads its grid with empty slots up to this many tiles; set to 0 once it is full
 };
 
 /* One entry per project, newest first. The first two also show on the home page.
-   cat: 'rigs' | 'tools' | 'studio'.   thumb and media src: an image, or an .mp4 / .webm clip. */
+   cat: one of CATS below.   thumb and media src: an image, or an .mp4 / .webm clip. */
+/* Work page sections, in filter order. A section with no projects yet shows empty slots. */
+const CATS = ['rigs', 'animation', 'tools'];
+
 const PROJECTS = [
   { id: 'creature-rig', cat: 'rigs', year: '2025', thumb: '',
     title: { en: 'Creature rig', ja: 'クリーチャーリグ' },
@@ -622,15 +627,7 @@ const PROJECTS = [
       ja: 'MayaのリグをUnreal Engine 5のControl Rigとして自動で再構築するツール。東京工科大学での研究。' },
     media: [
       { label: { en: 'Before and after', ja: '変換前と変換後' }, src: '' },
-      { label: { en: 'Walkthrough', ja: '手順の紹介' }, src: '' }] },
-  { id: 'studio-work', cat: 'studio', year: '2022–25', thumb: '',
-    title: { en: 'Studio work', ja: 'スタジオでの仕事' },
-    kind: { en: '3D generalist', ja: '3Dジェネラリスト' },
-    role: { en: '3D generalist', ja: '3Dジェネラリスト' },
-    software: ['Maya', 'Unreal Engine'],
-    summary: { en: 'Mathematic Studio (2022), Zag Studios (2023) and Miraculous Corp (2023 to 2025). [Add the shots you are cleared to show.]',
-      ja: 'Mathematic Studio（2022年）、Zag Studios（2023年）、Miraculous Corp（2023〜2025年）。［公開許可のあるショットを追加］' },
-    media: [{ label: { en: 'Shots', ja: 'ショット' }, src: '' }] }
+      { label: { en: 'Walkthrough', ja: '手順の紹介' }, src: '' }] }
 ];
 
 const T = {
@@ -649,7 +646,7 @@ const T = {
     's1d': 'The final look.', 's2d': 'Topology and edge flow, laid out for deformation.',
     's3d': 'Joint placement and orientation.', 's4d': 'What the animator touches.',
     'latest.title': 'Latest additions', 'latest.all': 'See all work', 'slot.todo': 'add file',
-    'wk.all': 'All', 'wk.empty': 'Empty slot', 'cat.rigs': 'Rigs', 'cat.tools': 'Tools', 'cat.studio': 'Studio work',
+    'wk.all': 'All', 'wk.empty': 'Empty slot', 'cat.rigs': 'Rigs', 'cat.tools': 'Tools', 'cat.animation': 'Animation',
     'pj.back': 'All work', 'pj.prev': 'Previous', 'pj.next': 'Next',
     'pj.type': 'Type', 'pj.year': 'Year', 'pj.role': 'Role', 'pj.soft': 'Software',
     'ab.bio1': 'I am a rigging artist and technical animator. Through research on 3D animation and rigging, I work on improving the workflow between Maya and Unreal Engine.',
@@ -681,7 +678,7 @@ const T = {
     's1d': '完成時の見た目。', 's2d': '変形を考えたトポロジーとエッジフロー。',
     's3d': 'ジョイントの配置と軸の向き。', 's4d': 'アニメーターが触る部分。',
     'latest.title': '最新の追加', 'latest.all': 'すべての作品を見る', 'slot.todo': 'ファイル未設定',
-    'wk.all': 'すべて', 'wk.empty': '空き枠', 'cat.rigs': 'リグ', 'cat.tools': 'ツール', 'cat.studio': 'スタジオワーク',
+    'wk.all': 'すべて', 'wk.empty': '空き枠', 'cat.rigs': 'リグ', 'cat.tools': 'ツール', 'cat.animation': 'アニメーション',
     'pj.back': '作品一覧', 'pj.prev': '前へ', 'pj.next': '次へ',
     'pj.type': '種別', 'pj.year': '制作年', 'pj.role': '担当', 'pj.soft': '使用ソフト',
     'ab.bio1': '3Dアニメーションとリギングの研究を通して、MayaとUnreal Engineのワークフローを改善することを目指しています。',
@@ -882,7 +879,7 @@ function renderLatest() {
 function renderWork() {
   const chips = $('#chips'), ul = $('#tiles');
   chips.textContent = ''; ul.textContent = '';
-  ['all', ...new Set(PROJECTS.map(p => p.cat))].forEach(c => {
+  ['all', ...CATS].forEach(c => {
     const b = mk('button', 'chip', tr(c === 'all' ? 'wk.all' : 'cat.' + c));
     b.type = 'button'; b.dataset.cat = c; b.setAttribute('aria-pressed', String(c === filter));
     chips.append(b);
@@ -893,7 +890,8 @@ function renderWork() {
     cap.append(mk('b', '', L(p.title)), mk('span', 'label', L(p.kind) + ', ' + p.year));
     a.append(frame(p.thumb, 'sq', true, L(p.title)), cap); li.append(a); ul.append(li);
   });
-  if (filter === 'all') for (let i = list.length; i < SITE.emptyTiles; i++) {
+  const pad = filter === 'all' ? SITE.emptyTiles : Math.max(4, list.length);
+  for (let i = list.length; i < pad; i++) {
     const li = mk('li'), d = mk('div', 'gtile gtile--empty'), cap = mk('span', 'gcap');
     cap.append(mk('span', 'label', tr('wk.empty')));
     d.append(mk('div', 'slot slot--sq'), cap); li.append(d); ul.append(li);
