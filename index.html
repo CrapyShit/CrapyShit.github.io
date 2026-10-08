@@ -262,7 +262,7 @@ dialog::backdrop{background:color-mix(in srgb,var(--tile) 62%,transparent)}
 .mail{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1rem}
 .mail b{font-weight:500;font-size:1.0625rem;user-select:all;overflow-wrap:anywhere}
 .reel{margin:auto;width:min(72rem,calc(100% - 2rem))}
-.reel video{display:block;width:100%;aspect-ratio:16/9;background:var(--tile)}
+.reel video,.reel-frame{display:block;width:100%;aspect-ratio:16/9;border:0;background:var(--tile)}
 
 /* ---------- page transition ---------- */
 .wipe{position:fixed;inset:0;z-index:100;display:grid;place-items:center}
@@ -597,7 +597,7 @@ const SITE = {
   email: 'jeanfkh@gmail.com',
   links: [['LinkedIn', 'https://www.linkedin.com/in/jean-fran%C3%A7ois-kharrat/'], ['ArtStation', 'https://www.artstation.com/jeanfkh'],
     ['YouTube', 'https://youtube.com/@jfk4852'], ['GitHub', 'https://github.com/CrapyShit']],
-  media: { shaded: '', wire: '', skeleton: '', controls: '', reel: '' },
+  media: { shaded: '', wire: '', skeleton: '', controls: '', reel: 'https://youtu.be/6N0kjsM0SSk' },   // reel: a YouTube link or a video file
   cv: '',          // path to your CV PDF
   emptyTiles: 8    // the Work page pads its grid with empty slots up to this many tiles; set to 0 once it is full
 };
@@ -833,16 +833,30 @@ menuBtn.addEventListener('click', () => {
 function openDlg(id) {
   const d = $('#' + id);
   if (id === 'dlg-reel' && SITE.media.reel) {
-    const v = $('#reel-video');
-    if (!v.src) v.src = SITE.media.reel;
-    v.hidden = false; $('#reel-slot').hidden = true;
-    v.play().catch(() => { /* waits for a tap */ });
+    const yt = SITE.media.reel.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/);
+    $('#reel-slot').hidden = true;
+    if (yt) {                                   // YouTube: build the player on open, remove it on close so playback stops
+      const f = document.createElement('iframe');
+      f.className = 'reel-frame'; f.title = tr('rl.title');
+      f.src = 'https://www.youtube-nocookie.com/embed/' + yt[1] + '?autoplay=1&rel=0&modestbranding=1';
+      f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'; f.allowFullscreen = true;
+      $('#reel-video').replaceWith(f); f.id = 'reel-video';
+    } else {
+      const v = $('#reel-video');
+      if (!v.src) v.src = SITE.media.reel;
+      v.hidden = false;
+      v.play().catch(() => { /* waits for a tap */ });
+    }
   }
   if (!d.open) d.showModal();
 }
 $$('dialog').forEach(d => {
   d.addEventListener('click', e => { if (e.target === d) d.close(); });
-  d.addEventListener('close', () => { const v = $('video', d); if (v) v.pause(); });
+  d.addEventListener('close', () => {
+    const v = $('video', d); if (v) v.pause();
+    const f = $('iframe', d);
+    if (f) { const n = document.createElement('video'); n.id = 'reel-video'; n.controls = true; n.playsInline = true; n.hidden = true; f.replaceWith(n); }
+  });
 });
 
 /* ---------- pages and the transition between them ---------- */
