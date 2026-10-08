@@ -8,7 +8,9 @@
 <meta property="og:title" content="Jeff Kharrat Portfolio">
 <meta property="og:description" content="Character rigging and technical animation, Maya and Unreal Engine 5.">
 <meta property="og:type" content="website">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico?v=2" sizes="32x32">
+<link rel="icon" href="favicon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>[hidden]{display:none!important}img{max-width:100%}</style>
 </head>
 <body>
@@ -201,8 +203,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .card{display:grid;gap:.6rem;text-decoration:none}
 .card h3{font-size:1.0625rem;font-weight:500;line-height:1.35}
 .slot{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:16/10;border:1px solid var(--line);padding:.75rem;text-align:center;
-  font-size:.75rem;color:var(--ink-2);
-  background:repeating-linear-gradient(135deg,transparent 0 9px,color-mix(in srgb,var(--line) 50%,transparent) 9px 10px),var(--panel)}
+  font-size:.75rem;color:var(--ink-2);background:var(--panel);isolation:isolate}
+.slot::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:color-mix(in srgb,var(--line) var(--slot-a),transparent);
+  -webkit-mask:var(--tet) 0 0/30px 30px;mask:var(--tet) 0 0/30px 30px}
+.slot-t{padding:.15rem .5rem;background:var(--panel)}
 .slot--wide{aspect-ratio:16/9}
 
 @media (min-width:64rem){
@@ -267,6 +271,8 @@ dialog::backdrop{background:color-mix(in srgb,var(--tile) 62%,transparent)}
 /* ---------- page transition ---------- */
 .wipe{position:fixed;inset:0;z-index:100;display:grid;place-items:center}
 .wipe canvas{position:absolute;inset:0;width:100%;height:100%}
+.wipe-c{position:relative;display:grid;justify-items:center;gap:clamp(.9rem,2.2vw,1.8rem)}
+.wipe-m{width:clamp(4.5rem,11vw,8.5rem);height:auto;fill:var(--ground)}
 .wipe p{position:relative;font-size:clamp(2rem,7vw,6rem);color:var(--ground)}
 
 /* ---------- temporary pages ---------- */
@@ -356,6 +362,27 @@ li.soft{justify-content:center}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .soft-ic--l{display:none}:root:not([data-theme="light"]) .soft-ic--d{display:inline}}
 :root[data-theme="dark"] .soft-ic--l{display:none}
 :root[data-theme="dark"] .soft-ic--d{display:inline}
+
+/* ---------- the Yeff sigil ----------
+   Header mark: the eye is two halves, so the slip between them can flicker on hover.
+   --tet is the stepped-block pattern that fills empty media slots, used as a mask so it takes the theme's line colour.
+   The credits plate is an LED panel: every dot is one dash of a dashed line, lit in the bright variant of the current accent. */
+:root{--slot-a:20%;--tet:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 6'%3E%3Cpath d='M1 0h2v1h-2zM0 1h2v1h-2zM4 3h2v1h-2zM3 4h2v1h-2z'/%3E%3C/svg%3E")}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--slot-a:38%}}
+:root[data-theme="dark"]{--slot-a:38%}
+.logo .eye-t{transform:translateX(1px)}
+.logo .eye-b{transform:translateX(-1px)}
+.logo:hover .eye-t,.logo:focus-visible .eye-t{animation:eye-t .46s steps(1,end) 1}
+.logo:hover .eye-b,.logo:focus-visible .eye-b{animation:eye-b .46s steps(1,end) 1}
+@keyframes eye-t{0%,44%{transform:translateX(0)}22%{transform:translateX(2px)}66%{transform:translateX(1px)}}
+@keyframes eye-b{0%,44%{transform:translateX(0)}22%{transform:translateX(-2px)}66%{transform:translateX(-1px)}}
+.plate{display:block;width:min(100%,20rem);background:var(--tile)}
+.plate svg{display:block;width:100%;height:auto;fill:none;stroke-width:.76;stroke-dasharray:.76 .24}
+.led-off{stroke:color-mix(in srgb,var(--on-tile) 9%,transparent)}
+.led-on{stroke:color-mix(in srgb,var(--acc-d) 84%,#fff);filter:drop-shadow(0 0 .3px var(--acc-d)) drop-shadow(0 0 1.5px color-mix(in srgb,var(--acc-d) 50%,transparent))}
+@media (prefers-reduced-motion:reduce){
+  .logo:hover .eye-t,.logo:hover .eye-b,.logo:focus-visible .eye-t,.logo:focus-visible .eye-b{animation:none}
+}
 </style>
 
 <header class="hdr" id="hdr">
@@ -363,8 +390,8 @@ li.soft{justify-content:center}
     <a class="logo" href="#home" data-route="home" aria-label="Jeff Kharrat, home">
       <svg viewBox="0 0 40 40" aria-hidden="true">
         <path d="M9 1h30v30l-8 8H1V9z" style="fill:var(--accent)"/>
-        <g style="fill:none;stroke:var(--on-accent);stroke-width:2.2">
-          <circle cx="14.5" cy="14.5" r="5.5"/><path d="M18.6 18.6l7.2 7.2"/><circle cx="27.8" cy="27.8" r="2.8"/>
+        <g transform="translate(6 13) scale(1.75)" style="fill:var(--on-accent)">
+          <path class="eye-t" d="M0 4A10 10 0 0 1 16 4V4.05H10V2H6V4.05H0z"/><path class="eye-b" d="M16 4A10 10 0 0 1 0 4V3.95H6V6H10V3.95H16z"/>
         </g>
       </svg>
       <span class="logo-t"><span class="logo-n">Jeff Kharrat</span><span class="logo-r" data-i18n="logo.role">rigging / tech anim</span></span>
@@ -469,6 +496,11 @@ li.soft{justify-content:center}
           <dl class="roll">
             <div><dt data-i18n="cr.r1">Rigging and tools</dt><dd>Jeff Kharrat</dd></div>
             <div><dt data-i18n="cr.r2">Software</dt><dd data-soft="Autodesk Maya, Unreal Engine 5, Python">Autodesk Maya, Unreal Engine 5, Python</dd></div>
+            <div><dt data-i18n="cr.r3">Character</dt><dd><span class="plate" role="img" aria-label="Yeff">
+              <svg viewBox="0 0 51 14" aria-hidden="true">
+                <path class="led-off" d="M.12 .5H51M.12 1.5H51M.12 2.5H51M.12 3.5H51M.12 4.5H51M.12 5.5H51M.12 6.5H51M.12 7.5H51M.12 8.5H51M.12 9.5H51M.12 10.5H51M.12 11.5H51M.12 12.5H51M.12 13.5H51"/>
+                <path class="led-on" d="M10.12 3.5h5.76M24.12 3.5h1.76M28.12 3.5h1.76M31.12 3.5h4.76M37.12 3.5h4.76M43.12 3.5h4.76M8.12 4.5h9.76M24.12 4.5h1.76M28.12 4.5h1.76M31.12 4.5h4.76M37.12 4.5h4.76M43.12 4.5h4.76M6.12 5.5h4.76M15.12 5.5h4.76M24.12 5.5h1.76M28.12 5.5h1.76M31.12 5.5h1.76M37.12 5.5h1.76M43.12 5.5h1.76M5.12 6.5h5.76M15.12 6.5h5.76M24.12 6.5h5.76M31.12 6.5h3.76M37.12 6.5h3.76M43.12 6.5h3.76M3.12 7.5h5.76M13.12 7.5h5.76M25.12 7.5h3.76M31.12 7.5h3.76M37.12 7.5h3.76M43.12 7.5h3.76M4.12 8.5h4.76M13.12 8.5h4.76M26.12 8.5h1.76M31.12 8.5h1.76M37.12 8.5h1.76M43.12 8.5h1.76M6.12 9.5h9.76M26.12 9.5h1.76M31.12 9.5h4.76M37.12 9.5h1.76M43.12 9.5h1.76M8.12 10.5h5.76M26.12 10.5h1.76M31.12 10.5h4.76M37.12 10.5h1.76M43.12 10.5h1.76"/>
+              </svg></span></dd></div>
           </dl>
         </section>
         <nav class="c-site" aria-labelledby="st-h">
@@ -590,12 +622,17 @@ li.soft{justify-content:center}
     <button class="sq" type="button" data-close aria-label="Close" data-i18n-aria="ct.close"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4l12 12M16 4L4 16"/></svg></button>
   </div>
   <div class="dlg-b">
-    <div class="slot slot--wide" id="reel-slot" data-i18n="rl.slot">Reel slot: 16:9, H.264 MP4</div>
+    <div class="slot slot--wide" id="reel-slot"><span class="slot-t" data-i18n="rl.slot">Reel slot: 16:9, H.264 MP4</span></div>
     <video id="reel-video" controls playsinline hidden></video>
   </div>
 </dialog>
 
-<div class="wipe" id="wipe" hidden aria-hidden="true"><canvas></canvas><p class="disp" id="wipe-t"></p></div>
+<div class="wipe" id="wipe" hidden aria-hidden="true"><canvas></canvas>
+  <div class="wipe-c" id="wipe-c">
+    <svg class="wipe-m" viewBox="0 0 18 8"><path fill-rule="evenodd" d="M0 4H2V3H3V2H5V1H7V0H13V1H15V2H17V3H18V4H16V5H15V6H13V7H11V8H5V7H3V6H1V5H0ZM6 4V6H10V4H12V2H8V4Z"/></svg>
+    <p class="disp" id="wipe-t"></p>
+  </div>
+</div>
 
 <script>
 (() => {
@@ -677,7 +714,7 @@ const T = {
     'ab.gen': '3D generalist', 'ab.tut': 'Tokyo University of Technology, School of Media Science', 'ab.rs': 'Research student',
     'ab.isart': 'Isart Digital, Paris', 'ab.ms': "Master's, 3D cinema. RNCP level 7: expert in digital design, CGI animation and VFX",
     'ab.fr': 'French, native', 'ab.en': 'English, professional (TOEIC 885)', 'ab.ja': 'Japanese, intermediate (JLPT N4)', 'ab.kendo': 'Kendo',
-    'cr.title': 'Credits', 'cr.r1': 'Rigging and tools', 'cr.r2': 'Software',
+    'cr.title': 'Credits', 'cr.r1': 'Rigging and tools', 'cr.r2': 'Software', 'cr.r3': 'Character',
     'ft.site': 'Site', 'ft.find': 'Find me', 'ft.theme': 'Light / dark', 'ft.top': 'Back to top',
     'ct.title': 'Contact', 'ct.email': 'Email', 'ct.copy': 'Copy', 'ct.copied': 'Copied', 'ct.links': 'Elsewhere',
     'ct.where': 'Based in', 'ct.loc': 'Hachioji, Tokyo (JST, UTC+9)', 'ct.avail': 'Availability', 'ct.close': 'Close', 'ct.todo': 'add link',
@@ -709,7 +746,7 @@ const T = {
     'ab.gen': '3Dジェネラリスト', 'ab.tut': '東京工科大学 メディア学部', 'ab.rs': '研究生',
     'ab.isart': 'Isart Digital Paris', 'ab.ms': '3Dシネマ専攻 修士課程。RNCPレベル7：デジタルデザイン、CGIアニメーション、VFXのエキスパート',
     'ab.fr': 'フランス語（ネイティブ）', 'ab.en': '英語（ビジネスレベル、TOEIC 885点）', 'ab.ja': '日本語（中級、JLPT N4）', 'ab.kendo': '剣道',
-    'cr.title': 'クレジット', 'cr.r1': 'リギング・ツール', 'cr.r2': 'ソフトウェア',
+    'cr.title': 'クレジット', 'cr.r1': 'リギング・ツール', 'cr.r2': 'ソフトウェア', 'cr.r3': 'キャラクター',
     'ft.site': 'サイト', 'ft.find': 'リンク', 'ft.theme': 'ライト / ダーク', 'ft.top': 'ページ上部へ',
     'ct.title': '連絡先', 'ct.email': 'メール', 'ct.copy': 'コピー', 'ct.copied': 'コピーしました', 'ct.links': 'その他のリンク',
     'ct.where': '拠点', 'ct.loc': '東京都八王子市（JST, UTC+9）', 'ct.avail': '稼働状況', 'ct.close': '閉じる', 'ct.todo': 'リンク未設定',
@@ -894,9 +931,9 @@ const projOf = name => (name.startsWith('p-') ? PROJECTS.find(p => p.id === name
 const known = name => name === 'home' || name === 'work' || name === 'about' || !!PAGES[name] || !!projOf(name);
 let filter = 'all';
 
-/* A media frame: the file if there is one, otherwise a hatched slot that says what goes there. */
+/* A media frame: the file if there is one, otherwise a patterned slot that says what goes there. */
 function frame(src, shape, quiet, alt) {
-  if (!src) return mk('div', 'slot slot--' + shape, { sq: '1:1', wide: '16:9', clip: '16:10' }[shape] + ' [' + tr('slot.todo') + ']');
+  if (!src) { const d = mk('div', 'slot slot--' + shape); d.append(mk('span', 'slot-t', { sq: '1:1', wide: '16:9', clip: '16:10' }[shape] + ' [' + tr('slot.todo') + ']')); return d; }
   const video = /\.(mp4|webm|mov)$/i.test(src), n = mk(video ? 'video' : 'img', 'fill fill--' + shape);
   n.src = src;
   if (video) { n.muted = true; n.loop = true; n.playsInline = true; n.autoplay = true; if (!quiet) n.controls = true; } else n.alt = alt || '';
@@ -978,7 +1015,7 @@ let wiping = false;
 function fade(mid) {
   wiping = true;
   const el = $('#wipe'), cv = $('canvas', el);
-  cv.hidden = true; $('#wipe-t').textContent = '';
+  cv.hidden = true; $('#wipe-t').textContent = ''; $('#wipe-c').style.visibility = 'hidden';
   Object.assign(el.style, { background: 'var(--ground)', opacity: '0', transition: 'opacity .16s linear' });
   el.hidden = false;
   requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -991,9 +1028,9 @@ function fade(mid) {
 }
 function wipe(label, mid, acc) {
   wiping = true;
-  const el = $('#wipe'), cv = $('canvas', el), ctx = cv.getContext('2d'), lab = $('#wipe-t');
+  const el = $('#wipe'), cv = $('canvas', el), ctx = cv.getContext('2d'), lab = $('#wipe-t'), box = $('#wipe-c');   // box: the sigil and the page name
   const ink = getComputedStyle(root).getPropertyValue('--ink').trim();
-  lab.textContent = ''; lab.style.visibility = 'hidden'; el.hidden = false;
+  lab.textContent = ''; box.style.visibility = 'hidden'; el.hidden = false;
   const W = cv.width = innerWidth, H = cv.height = innerHeight;
   const cols = W < 900 ? 2 : 4, cell = Math.ceil(W / (cols * 7)), nx = Math.ceil(W / cell), ny = Math.ceil(H / cell);
   const d = new Float32Array(nx * ny); let max = 0;
@@ -1014,8 +1051,8 @@ function wipe(label, mid, acc) {
       ctx.fillStyle = edge ? acc : ink;
       ctx.fillRect((i % nx) * cell, Math.floor(i / nx) * cell, cell + 1, cell + 1);
     }
-    if (pin === 1 && !swapped) { swapped = true; mid(); lab.textContent = label; lab.style.visibility = 'visible'; scramble(lab); }
-    if (pout > 0) lab.style.visibility = 'hidden';
+    if (pin === 1 && !swapped) { swapped = true; mid(); lab.textContent = label; box.style.visibility = 'visible'; scramble(lab); }
+    if (pout > 0) box.style.visibility = 'hidden';
     if (t < IN + HOLD + OUT) requestAnimationFrame(frame);
     else { el.hidden = true; wiping = false; }
   })(t0);
