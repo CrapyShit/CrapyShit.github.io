@@ -383,6 +383,20 @@ li.soft{justify-content:center}
 @media (prefers-reduced-motion:reduce){
   .logo:hover .eye-t,.logo:hover .eye-b,.logo:focus-visible .eye-t,.logo:focus-visible .eye-b{animation:none}
 }
+
+/* ---------- origin sequence ----------
+   One canvas for the lore animation: inside the stage on narrow screens, fixed behind the whole page on wide ones.
+   .fig wraps the figure layers so the sequence can reveal them with one clip. */
+.lore{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.lore--bg{position:fixed;z-index:-1}
+body[data-view="page"] .lore--bg{display:none}
+.fig{position:absolute;inset:0}
+.stage[data-lore] > .hud:not(.lore-cap),.stage[data-lore] > .ph{visibility:hidden}
+.lore-b{pointer-events:auto;justify-self:start;min-height:1.75rem;font-size:.6875rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);
+  text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:.3em}
+.lore-b:hover{color:var(--ink)}
+.lore-re{position:absolute;right:var(--pad);bottom:.35rem;z-index:2}
+@media (min-width:64rem){.lore-re{bottom:auto;top:7.2rem}}
 </style>
 
 <header class="hdr" id="hdr">
@@ -445,16 +459,25 @@ li.soft{justify-content:center}
 
         <div class="mark" id="mark"></div>
         <div class="stage" id="stage">
-          <canvas data-layer="0"></canvas><canvas data-layer="1"></canvas><canvas data-layer="2"></canvas><canvas data-layer="3"></canvas>
-          <video data-layer="0" muted loop playsinline hidden></video><video data-layer="1" muted loop playsinline hidden></video>
-          <video data-layer="2" muted loop playsinline hidden></video><video data-layer="3" muted loop playsinline hidden></video>
+          <div class="fig" id="fig">
+            <canvas data-layer="0"></canvas><canvas data-layer="1"></canvas><canvas data-layer="2"></canvas><canvas data-layer="3"></canvas>
+            <video data-layer="0" muted loop playsinline hidden></video><video data-layer="1" muted loop playsinline hidden></video>
+            <video data-layer="2" muted loop playsinline hidden></video><video data-layer="3" muted loop playsinline hidden></video>
+          </div>
           <div class="hud">
             <span class="hud-n"><span data-i18n="hud.viewport">Viewport</span> <span id="hud-i">01</span>/04 <span aria-hidden="true">&nbsp;F <span id="hud-f">0001</span></span></span>
             <span class="hud-m" id="hud-m" data-i18n="s1">Shaded</span>
             <span class="hud-d" id="hud-d" data-i18n="s1d">The final look.</span>
           </div>
           <i class="scan" id="scan" hidden></i>
+          <i class="scan" id="lore-scan" hidden></i>
           <p class="ph" id="ph" data-i18n="ph.fig">Stand-in figure</p>
+          <div class="hud lore-cap" id="lore-cap" hidden>
+            <span class="hud-n"><span data-i18n="lore.k">Origin</span> <span id="lore-i">01</span>/05</span>
+            <span class="hud-m" id="lore-t" data-i18n="lore.1">Uncharted system</span>
+            <button class="lore-b" id="lore-b" type="button" data-i18n="lore.skip">Skip</button>
+          </div>
+          <button class="lore-b lore-re" id="lore-re" type="button" data-i18n="lore.replay" hidden>Replay origin</button>
         </div>
 
         <div class="side">
@@ -646,6 +669,7 @@ const SITE = {
   links: [['LinkedIn', 'https://www.linkedin.com/in/jean-fran%C3%A7ois-kharrat/'], ['ArtStation', 'https://www.artstation.com/jeanfkh'],
     ['YouTube', 'https://youtube.com/@jfk4852'], ['GitHub', 'https://github.com/CrapyShit']],
   media: { shaded: '', wire: '', skeleton: '', controls: '', reel: 'https://youtu.be/6N0kjsM0SSk' },   // reel: a YouTube link or a video file
+  intro: 'always', // the origin sequence behind the home page: 'always' plays on every load, 'once' once per browser, 'off' never
   cv: '',          // path to your CV PDF
   emptyTiles: 8    // the Work page pads its grid with empty slots up to this many tiles; set to 0 once it is full
 };
@@ -698,6 +722,8 @@ const T = {
     'hero.intro': 'I rig characters and creatures in Maya, then carry those rigs into Unreal Engine 5 Control Rig. Based in Tokyo.',
     'hero.cta': 'Play the reel',
     'hud.viewport': 'Viewport', 'ph.fig': 'Stand-in figure',
+    'lore.k': 'Origin', 'lore.1': 'Uncharted system', 'lore.2': 'A moon that built itself', 'lore.3': 'The data center',
+    'lore.4': 'Digitising', 'lore.5': 'Proto online', 'lore.skip': 'Skip', 'lore.replay': 'Replay origin',
     'side.slot': 'Detail loop slot, 1:1', 'side.works': 'Works in',
     'inside.lede': 'Scroll to take the character apart, in the order a rig is built.',
     's1': 'Shaded', 's2': 'Wireframe', 's3': 'Skeleton', 's4': 'Controls',
@@ -730,6 +756,8 @@ const T = {
     'hero.intro': 'Mayaでキャラクターやクリーチャーのリグを組み、Unreal Engine 5のControl Rigへ移植しています。東京在住。',
     'hero.cta': 'デモリールを再生',
     'hud.viewport': 'ビューポート', 'ph.fig': '仮のフィギュア',
+    'lore.k': '起源', 'lore.1': '未登録の星系', 'lore.2': '自らを造った月', 'lore.3': 'データセンター',
+    'lore.4': 'デジタル化', 'lore.5': 'Proto 起動', 'lore.skip': 'スキップ', 'lore.replay': '起源をもう一度再生',
     'side.slot': 'ディテールループ枠 1:1', 'side.works': '使用ツール',
     'inside.lede': 'スクロールすると、リグを組む順番でキャラクターが分解されていきます。',
     's1': 'シェーディング', 's2': 'ワイヤーフレーム', 's3': 'スケルトン', 's4': 'コントローラー',
@@ -1093,7 +1121,8 @@ let C = {};
 function readColours() {
   const cs = getComputedStyle(root), g = n => cs.getPropertyValue(n).trim();
   C = { ink: g('--ink'), ink2: g('--ink-2'), ground: g('--ground'), line: g('--line'), ghost: g('--ghost'),
-    lit: g('--fig-lit'), shade: g('--fig-shade'), L: g('--ctl-l'), R: g('--ctl-r'), M: g('--ctl-c'), Y: g('--ax-y'), onTile: g('--on-tile') };
+    lit: g('--fig-lit'), shade: g('--fig-shade'), L: g('--ctl-l'), R: g('--ctl-r'), M: g('--ctl-c'), Y: g('--ax-y'), onTile: g('--on-tile'),
+    acc: g('--accent'), panel: g('--panel'), glA: g('--gl-a'), glB: g('--gl-b') };
 }
 
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -1288,6 +1317,490 @@ if (useVideo) {
   setInterval(() => { const t = vids[0].currentTime; vids.slice(1).forEach(v => { if (Math.abs(v.currentTime - t) > .06) v.currentTime = t; }); }, 2000);
 }
 
+/* ---------- origin sequence: Proto's lore, played behind the home page ----------
+   One zoom in five beats: an uncharted system, the moon that built itself, its data center,
+   the dive into a rack, and the digital world where the figure assembles.
+   It is drawn in the theme's colours on one canvas: behind the whole page on wide screens, inside the stage on narrow ones.
+   Every beat is placed from the stage's own camera, so the last one lands on the figure at any window size,
+   and the figure layers (stand-in or video) stay hidden until the scan at the end reveals them.
+   SITE.intro: 'always' plays on every load, 'once' once per browser, 'off' never. */
+const lore = (() => {
+  const when = SITE.intro || 'always';
+  const fig = $('#fig'), capEl = $('#lore-cap'), ttl = $('#lore-t'), num = $('#lore-i'), skip = $('#lore-b'), again = $('#lore-re'), bar = $('#lore-scan');
+  if (when === 'off') return null;
+  const cv = mk('canvas', 'lore'), g = cv.getContext('2d'), wide = matchMedia('(min-width:64rem)');
+  cv.setAttribute('aria-hidden', 'true');
+
+  const cl = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const st = (a, b, v) => { const x = cl((v - a) / (b - a)); return x * x * (3 - 2 * x); };
+  const eo = x => 1 - Math.pow(1 - cl(x), 3);
+  const eio = x => { x = cl(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+  const eb = x => { x = cl(x) - 1; return 1 + 2.70158 * x * x * x + 1.70158 * x * x; };   // overshoots, then settles
+  const mix = (a, b, k) => a + (b - a) * k;
+  let seed = 11;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const hash = (a, b = 0) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  const TAU = 6.2832, FONT = '"M PLUS 1 Code",ui-monospace,Menlo,Consolas,monospace';
+
+  /* The zoom is one number, Z (natural log of scale), read off a curve of [seconds, Z] keys.
+     Each scene sits a fixed distance further down that zoom: the moon is R0 of the system's size, the data center R1 of the moon's. */
+  const R0 = .012, R1 = .02, Z1 = Math.log(1 / R0), Z2 = Z1 + Math.log(1 / R1), DIVE = 6.8;
+  const KEY = [[0, -.75], [2.9, 0], [4.3, Z1 - .35], [6.2, Z1 + .1], [7.4, Z2 - .45], [9.5, Z2 + .35], [10.7, Z2 + DIVE]];
+  const BEAT = [0, 3.5, 6.7, 9.8, 12.4], T_FLY = 10, T_VOX = 10.7, T_SCAN = 12.7, END = 13.8;
+  const KM = KEY.map((k, i) => (i < KEY.length - 1 ? (KEY[i + 1][1] - k[1]) / (KEY[i + 1][0] - k[0]) : 0));
+  const KT = KEY.map((k, i) => (i === 0 ? KM[0] : i === KEY.length - 1 ? 0 : 2 * KM[i - 1] * KM[i] / (KM[i - 1] + KM[i])));
+  function zoomAt(t) {
+    const n = KEY.length - 1;
+    if (t <= 0) return KEY[0][1];
+    if (t >= KEY[n][0]) return KEY[n][1];
+    let i = 0; while (t > KEY[i + 1][0]) i++;
+    const h = KEY[i + 1][0] - KEY[i][0], u = (t - KEY[i][0]) / h, u2 = u * u, u3 = u2 * u;
+    return (2 * u3 - 3 * u2 + 1) * KEY[i][1] + (u3 - 2 * u2 + u) * h * KT[i] + (3 * u2 - 2 * u3) * KEY[i + 1][1] + (u3 - u2) * h * KT[i + 1];
+  }
+
+  /* ----- small drawing helpers ----- */
+  const seg = (a, b) => { g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); };
+  const poly = pts => { g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.closePath(); };
+  const oval = (c, a, b, rot = 0, from = 0, to = TAU) => { g.beginPath(); g.ellipse(c[0], c[1], Math.max(.1, a), Math.max(.1, b), rot, from, to); };
+  function text(s, x, y, col, al, align = 'left', size = 11) {
+    g.globalAlpha = al; g.fillStyle = col; g.font = '500 ' + size + 'px ' + FONT; g.textAlign = align; g.textBaseline = 'middle'; g.fillText(s, x, y);
+  }
+  function brackets(p, r, col, al, w = 1.4) {          // four corner marks around a point
+    g.globalAlpha = al; g.strokeStyle = col; g.lineWidth = w; g.beginPath();
+    [-1, 1].forEach(sx => [-1, 1].forEach(sy => {
+      g.moveTo(p[0] + sx * r, p[1] + sy * r * .45); g.lineTo(p[0] + sx * r, p[1] + sy * r); g.lineTo(p[0] + sx * r * .45, p[1] + sy * r);
+    }));
+    g.stroke();
+  }
+  const CUBE_F = [[[1, 0, 0], [0, 1, 0], [0, 0, 1]], [[-1, 0, 0], [0, 1, 0], [0, 0, 1]], [[0, 1, 0], [1, 0, 0], [0, 0, 1]], [[0, -1, 0], [1, 0, 0], [0, 0, 1]], [[0, 0, 1], [1, 0, 0], [0, 1, 0]], [[0, 0, -1], [1, 0, 0], [0, 1, 0]]];
+  function cube(c, r, a, b, al, fill, edge) {           // a cube seen from the front: only the faces turned to the viewer
+    const tf = v => rx(ry(v, a), b);
+    g.lineWidth = 1; g.strokeStyle = edge; g.fillStyle = fill; g.lineJoin = 'round';
+    CUBE_F.forEach(([n, u, w]) => {
+      if (tf(n)[2] <= 0) return;
+      poly([[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([i, j]) => { const p = tf(add(n, add(mul(u, i), mul(w, j)))); return [c[0] + p[0] * r, c[1] - p[1] * r]; }));
+      g.globalAlpha = al; g.fill(); g.stroke();
+    });
+  }
+  function callout(p, dx, dy, lines, al) {              // a leader line with one or two lines of text at its end
+    if (al <= 0) return;
+    const e = [p[0] + dx, p[1] + dy], dir = dx < 0 ? -1 : 1, f = [e[0] + dir * 26, e[1]];
+    g.globalAlpha = al * .8; g.strokeStyle = C.ink2; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(e[0], e[1]); g.lineTo(f[0], f[1]); g.stroke();
+    g.fillStyle = C.acc; g.globalAlpha = al; g.fillRect(p[0] - 2, p[1] - 2, 4, 4);
+    lines.forEach((s, i) => text(s, f[0] + dir * 8, f[1] + i * 15, i ? C.ink2 : C.ink, al, dir < 0 ? 'right' : 'left'));
+  }
+
+  /* ----- beat 1: the system ----- */
+  const TILT = .4, ROLL = -.2, CR = Math.cos(ROLL), SR = Math.sin(ROLL);
+  const flat = (x, z, y = 0) => { const v = z * TILT - y; return [x * CR - v * SR, x * SR + v * CR]; };   // the orbital plane, seen from above and rolled a little
+  const ORB = [.16, .25, .36, .5, .68, .9, 1.18, 1.5].map((r, i) => ({ r, a0: rnd() * TAU, w: .5 * Math.pow(.16 / r, 1.5) + .02, k: [.011, .015, .021, .017, .04, .03, .022, .016][i] }));
+  const BELT = Array.from({ length: 120 }, () => [.565 + rnd() * .06, rnd() * TAU]);
+  const MOON = [.52, .1, .32], T0 = flat(MOON[0], MOON[1], MOON[2]);     // the moon hangs above the plane, on no orbit
+  const FIND = [1.0, 1.45, 1.9, 2.35];                                    // when the search reticle leaves for each stop
+  function system(G, s, c, al, t) {
+    const B = G.B * s, X = G.A[0] - c[0] * B, Y = G.A[1] - c[1] * B;
+    const at = (x, z, y) => { const p = flat(x, z, y); return [X + p[0] * B, Y + p[1] * B]; };
+    const where = o => { const a = o.a0 + o.w * t; return at(o.r * Math.cos(a), o.r * Math.sin(a)); };
+    g.lineWidth = 1; g.strokeStyle = C.ink2;
+    ORB.forEach((o, i) => {                                               // orbits draw on, starting from their planet
+      const d = st(.15 + i * .1, 1 + i * .1, t), a = o.a0 + o.w * t;
+      if (!d) return;
+      g.globalAlpha = al * (i % 3 === 2 ? .4 : .6); g.setLineDash(i % 3 === 2 ? [2, 5] : []);
+      g.beginPath();
+      for (let k = 0; k <= 96 * d; k++) { const p = at(o.r * Math.cos(a + k / 96 * TAU), o.r * Math.sin(a + k / 96 * TAU)); if (k) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); }
+      g.stroke();
+    });
+    g.setLineDash([]);
+    g.globalAlpha = al * .5 * st(.9, 1.6, t); g.beginPath();              // ruler ticks on the sixth orbit
+    for (let k = 0; k < 72; k++) { const a = k / 72 * TAU + t * .05, r2 = .9 + (k % 6 ? .014 : .032), p = at(.9 * Math.cos(a), .9 * Math.sin(a)), q = at(r2 * Math.cos(a), r2 * Math.sin(a)); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+    g.stroke();
+    g.fillStyle = C.ink2; g.globalAlpha = al * .55 * st(.6, 1.4, t);       // the belt
+    BELT.forEach(([r, a]) => { const p = at(r * Math.cos(a + t * .07), r * Math.sin(a + t * .07)); g.fillRect(p[0] - .8, p[1] - .8, 1.6, 1.6); });
+
+    const sun = at(0, 0), rs = .05 * B * eb(st(0, .6, t)), hp = (t * .7) % 1;
+    g.globalAlpha = al * (1 - hp) * .5; g.strokeStyle = C.acc; g.lineWidth = 1.2; oval(sun, rs * (1.5 + hp * 2.6), rs * (1.5 + hp * 2.6)); g.stroke();
+    g.globalAlpha = al; g.fillStyle = C.acc; oval(sun, rs, rs); g.fill();
+    g.strokeStyle = C.ink; g.lineWidth = 1; g.setLineDash([3, 4]); g.lineDashOffset = -t * 10; oval(sun, rs * 1.5, rs * 1.5); g.stroke(); g.setLineDash([]);
+    g.globalAlpha = al * .7; g.beginPath();
+    for (let k = 0; k < 24; k++) { const a = k / 24 * TAU + t * .25, r1 = rs * 1.85, r2 = rs * (k % 2 ? 2.05 : 2.35); g.moveTo(sun[0] + Math.cos(a) * r1, sun[1] + Math.sin(a) * r1); g.lineTo(sun[0] + Math.cos(a) * r2, sun[1] + Math.sin(a) * r2); }
+    g.stroke();
+
+    ORB.forEach((o, i) => {                                               // planets
+      const k = eb(st(.5 + i * .1, 1 + i * .1, t));
+      if (k <= 0) return;
+      const p = where(o), r = Math.max(1.5, o.k * B) * k;
+      g.strokeStyle = C.ink; g.lineWidth = 1;
+      if (i === 4) { g.globalAlpha = al * .8; oval(p, r * 1.9, r * .5, ROLL - .25); g.stroke(); }
+      g.globalAlpha = al; g.fillStyle = C.ground; g.lineWidth = 1.2; oval(p, r, r); g.fill(); g.stroke();
+      if (r > 5) { g.globalAlpha = al * .55; g.lineWidth = .8; oval(p, r, r * .3, ROLL); g.stroke(); oval(p, r * Math.abs(Math.cos(t * .5 + i)), r, ROLL); g.stroke(); }
+      if (i === 4) { g.globalAlpha = al * .8; g.lineWidth = 1; oval(p, r * 1.9, r * .5, ROLL - .25, 0, Math.PI); g.stroke(); }
+    });
+
+    /* The search: three catalogued planets, then the empty spot where the moon turns out to be. */
+    const far = al * (1 - st(1.6, 4, s));
+    if (t > FIND[0] - .15 && far > 0) {
+      const stops = [ORB[2], ORB[4], ORB[6]].map(where); stops.push(at(MOON[0], MOON[1], MOON[2]));
+      let i = 0; while (i < 3 && t > FIND[i + 1]) i++;
+      const k = i ? eio((t - FIND[i]) / .34) : 1, from = stops[Math.max(0, i - 1)], p = [mix(from[0], stops[i][0], k), mix(from[1], stops[i][1], k)];
+      const lock = i === 3 ? st(FIND[3] + .34, FIND[3] + .7, t) : 0, r = Math.max(9, mix(.07, .034, lock) * B), a = far * st(FIND[0] - .15, FIND[0], t);
+      const col = lock > .5 ? C.acc : C.ink;
+      brackets(p, r, col, a * (lock > 0 && lock < 1 && (t * 14 | 0) % 2 ? .3 : 1));
+      g.lineWidth = 1; g.globalAlpha = a * .7; g.beginPath();
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => { g.moveTo(p[0] + dx * r * 1.45, p[1] + dy * r * 1.45); g.lineTo(p[0] + dx * r * 2.3, p[1] + dy * r * 2.3); });
+      g.stroke();
+      if (i === 3 && k >= 1) {                                            // its height above the plane
+        const foot = at(MOON[0], MOON[1], 0), m = stops[3], d = a * st(FIND[3] + .3, FIND[3] + .8, t);
+        g.strokeStyle = C.ink2; g.globalAlpha = d * .8; g.setLineDash([3, 4]); seg(foot, [mix(foot[0], m[0], d * .88), mix(foot[1], m[1], d * .88)]); seg(sun, foot); g.setLineDash([]);
+        oval(foot, .035 * B, .035 * B * TILT, ROLL); g.stroke();
+      }
+      if (G.B > 230 && k >= 1) {
+        const lx = p[0] + r * 2.6, ly = p[1] - 8;
+        if (i < 3) { text('P-0' + (i * 2 + 3), lx, ly, C.ink, a); text('CATALOGUED', lx, ly + 15, C.ink2, a); }
+        else {
+          let code = ''; for (let n = 0; n < 9; n++) code += n === 4 ? '.' : lock >= 1 ? '?' : '0123456789ABCDEF'[hash(n, t * 24 | 0) * 16 | 0];
+          text('NO CATALOGUE ENTRY', lx, ly, C.ink, a); text('LOC ' + (lock >= 1 ? 'UNKNOWN' : code), lx, ly + 15, lock >= 1 ? C.acc : C.ink2, a);
+        }
+      }
+    }
+  }
+
+  /* ----- beat 2: the moon, laying its own shell from the south pole up ----- */
+  const RM = .4, TX = .3, CZ = Math.cos(.2), SZ = Math.sin(.2), LAT0 = -1.5708, DLAT = .34907, DLON = .5236;
+  const DC_LAT = .16, DC_LON = -.22, SPIN = 2.5;
+  const PLATE = Array.from({ length: 34 }, (_, i) => ({ j: 1 + (rnd() * 6 | 0), k: rnd() * 12 | 0, d: rnd() * .25, acc: i % 9 === 4 }));
+  const lean = v => { v = rx(v, TX); return [v[0] * CZ - v[1] * SZ, v[0] * SZ + v[1] * CZ, v[2]]; };
+  const onMoon = (lat, lon, r = 1) => lean([r * Math.cos(lat) * Math.sin(lon), r * Math.sin(lat), r * Math.cos(lat) * Math.cos(lon)]);
+  const spinAt = t => DC_LON - SPIN * (1 - eo((t - 3.8) / 2.1));
+  const moonTarget = t => { const v = onMoon(DC_LAT, spinAt(t)); return [v[0] * RM, -v[1] * RM, v[2]]; };
+  function moon(G, O, s, al, t) {
+    const R = RM * G.B * s, show = al * st(2.62, 2.9, t) * (t < 2.9 && (t * 20 | 0) % 2 ? .4 : 1);
+    if (show <= 0) return;
+    const pt = v => [O[0] + v[0] * R, O[1] - v[1] * R];
+    if (R < 5) { g.globalAlpha = show; g.fillStyle = C.ink; oval(O, Math.max(1.6, R), Math.max(1.6, R)); g.fill(); return; }
+    const ph = spinAt(t), b = st(3.5, 5.4, t), top = LAT0 + Math.PI * b, fine = R > 60;
+    const halo = (r, n, off, pass, fn) => {                               // a ring around the moon, one half at a time
+      for (let k = 0; k < n; k++) { const a = onMoon(0, k / n * TAU + off, r), c = onMoon(0, (k + 1) / n * TAU + off, r); if ((a[2] + c[2] > 0) === pass) fn(pt(a), pt(c), k); }
+    };
+    const collectors = pass => {
+      const on = st(.7, 1, b);
+      if (!on) return;
+      g.strokeStyle = C.ink2; g.lineWidth = 1; g.globalAlpha = show * on * (pass ? .7 : .3); g.beginPath();
+      halo(1.5, 72, 0, pass, (p, q) => { g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }); g.stroke();
+      for (let k = 0; k < 10; k++) {
+        const v = onMoon(0, k / 10 * TAU + t * .12, 1.5);
+        if ((v[2] > 0) !== pass || on < (k + 1) / 10) continue;
+        const p = pt(v), q = Math.max(2, R * .04);
+        g.globalAlpha = show * (pass ? 1 : .4); g.fillStyle = k % 3 ? C.ghost : C.acc; g.strokeStyle = C.ink; g.fillRect(p[0] - q, p[1] - q * .6, q * 2, q * 1.2); g.strokeRect(p[0] - q, p[1] - q * .6, q * 2, q * 1.2);
+      }
+    };
+    collectors(false);
+    g.globalAlpha = show * b; g.fillStyle = C.ground; oval(O, R, R); g.fill();
+    g.globalAlpha = show * .7 * (1 - b); g.strokeStyle = C.ink2; g.lineWidth = 1; g.setLineDash([3, 5]); oval(O, R, R); g.stroke(); g.setLineDash([]);
+    const shell = pass => {
+      g.beginPath();
+      for (let j = 1; j < 9; j++) {
+        const lat = LAT0 + j * DLAT; if (lat > top) break;
+        for (let k = 0; k < 48; k++) { const a = onMoon(lat, k / 48 * TAU + ph), c = onMoon(lat, (k + 1) / 48 * TAU + ph); if ((a[2] + c[2] > 0) === pass) { const p = pt(a), q = pt(c); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); } }
+      }
+      for (let m = 0; m < 12; m++) for (let k = 0; k < 24; k++) {
+        const la = LAT0 + k / 24 * Math.PI; if (la >= top) break;
+        const a = onMoon(la, m * DLON + ph), c = onMoon(Math.min(top, la + Math.PI / 24), m * DLON + ph);
+        if ((a[2] + c[2] > 0) === pass) { const p = pt(a), q = pt(c); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+      }
+      g.stroke();
+    };
+    g.strokeStyle = C.ink; g.lineWidth = 1; g.globalAlpha = show * .16; shell(false);
+    if (fine) PLATE.forEach(pl => {                                       // hull plates snap in behind the build line
+      const la = LAT0 + pl.j * DLAT, lo = pl.k * DLON + ph, mid = onMoon(la + DLAT / 2, lo + DLON / 2);
+      if (mid[2] < .1 || top < la + DLAT + pl.d) return;
+      const pts = [], e = .03;
+      for (let k = 0; k <= 4; k++) pts.push(pt(onMoon(la + e, lo + e + (DLON - 2 * e) * k / 4)));
+      for (let k = 4; k >= 0; k--) pts.push(pt(onMoon(la + DLAT - e, lo + e + (DLON - 2 * e) * k / 4)));
+      g.globalAlpha = show * cl(mid[2] * 2.2) * (pl.acc ? .85 : .9); g.fillStyle = pl.acc ? C.acc : C.ghost; poly(pts); g.fill();
+    });
+    g.globalAlpha = show * .75; shell(true);
+    g.globalAlpha = show * b; g.lineWidth = 1.4; oval(O, R, R); g.stroke();
+    if (b > 0 && b < 1) {                                                 // the build line and the four builders on it
+      g.strokeStyle = C.acc; g.lineWidth = 2; g.globalAlpha = show; g.beginPath();
+      for (let k = 0; k < 48; k++) { const a = onMoon(top, k / 48 * TAU), c = onMoon(top, (k + 1) / 48 * TAU); if (a[2] + c[2] > 0) { const p = pt(a), q = pt(c); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); } }
+      g.stroke(); g.fillStyle = C.acc;
+      for (let k = 0; k < 4; k++) { const v = onMoon(top, t * 3 + k * 1.5708); if (v[2] > 0) { const p = pt(v); g.fillRect(p[0] - 3, p[1] - 3, 6, 6); } }
+    }
+    collectors(true);
+    const sa = t * .9, sv = lean(rx([1.95 * Math.cos(sa), 0, 1.95 * Math.sin(sa)], .9)), sp = pt(sv);   // one tug on a steep orbit
+    if (b > .3 && !(sv[2] < 0 && Math.hypot(sv[0], sv[1]) < 1)) cube(sp, Math.max(2.5, R * .035), t * 1.3, .6, show * (sv[2] < 0 ? .45 : 1), C.ground, C.ink);
+    if (G.B > 230 && R > 90) {
+      const fade = show * (1 - st(1.5, 2.6, s));
+      callout([O[0] + R * .78, O[1] - R * .63], 34, -30, ['BODY: ARTIFICIAL', 'BUILT BY ITSELF'], fade * st(.25, .45, b));
+      callout([O[0] - R * 1.38, O[1] + R * .34], -30, 34, ['POWER: OWN RING', 'NO SUPPLY ROUTE'], fade * st(.85, 1, b));
+    }
+  }
+
+  /* ----- beat 3: the data center on the moon's surface ----- */
+  const RK = { w: .066, d: .05, h: .15 }, SITE3 = [];
+  for (let r = 0; r < 3; r++) for (let i = 0; i < 7; i++) SITE3.push({ t: 'rack', x: (i - 3) * .088, z: (r - 1) * .15, dl: .25 + rnd() * .5, id: r * 7 + i });
+  for (let i = 0; i < 3; i++) SITE3.push({ t: 'tower', x: .43, z: (i - 1) * .16, r: .04, h: .11, dl: .15 + i * .12 });
+  for (let r = 0; r < 5; r++) for (let i = 0; i < 2; i++) SITE3.push({ t: 'solar', x: -.47 + i * .075, z: (r - 2) * .1, dl: i * .1 + r * .07 });
+  SITE3.push({ t: 'mast', x: -.2, z: -.38, h: .26, dl: .5 }, { t: 'pad', x: .22, z: .38, r: .07, dl: .1 }, { t: 'hut', x: .14, z: -.38, w: .2, d: .07, h: .05, dl: .2 });
+  const TARGET = 17, LED = { x: 0, y: RK.h * (.86 - 3 * .105), z: .15 + RK.d / 2, e: RK.w * .07 };   // the rack and the light the camera dives into
+  const WIRES = [[[-.36, -.2], [-.36, .2]], [[-.36, 0], [-.33, 0]], [[.39, -.16], [.39, .16]], [[.39, 0], [.33, 0]], [[.14, -.345], [.14, -.24]], [[-.2, -.38], [-.2, -.24]]];
+  function siteCam(t, Z) {
+    const gz = Z - Z2, a = st(-1.7, 0, gz), d = st(.5, 2.4, gz);
+    const yaw = (.62 + .1 * Math.sin(t * .8)) * a * (1 - d), pit = mix(mix(1.5708, .6, a), .1, d);
+    const cam = { cy: Math.cos(yaw), sy: Math.sin(yaw), cp: Math.cos(pit), sp: Math.sin(pit), grow: st(-1.5, -.15, gz) };
+    cam.at = (x, y, z) => { const xr = x * cam.cy - z * cam.sy, zr = x * cam.sy + z * cam.cy; return [xr, zr * cam.sp - y * cam.cp, zr * cam.cp + y * cam.sp]; };
+    cam.T = cam.at(LED.x, LED.y, LED.z);
+    return cam;
+  }
+  function site(G, O, s, al, t, cam) {
+    const W2 = G.B * s;                                                   // the site's width on screen
+    if (al <= 0) return null;
+    const full = st(16, 44, W2), pj = (x, y, z) => { const p = cam.at(x, y, z); return [O[0] + p[0] * W2, O[1] + p[1] * W2, p[2]]; };
+    if (full < 1) {                                                       // from orbit it is one blinking mark
+      const q = Math.max(3, W2 * .5), pu = (t * 1.1) % 1;
+      g.globalAlpha = al * (1 - full); g.fillStyle = C.acc; g.fillRect(O[0] - q / 2, O[1] - q / 2, q, q);
+      g.strokeStyle = C.acc; g.lineWidth = 1.2; g.globalAlpha = al * (1 - full) * (1 - pu); g.strokeRect(O[0] - q * (.5 + pu * 1.6), O[1] - q * (.5 + pu * 1.6), q * (1 + pu * 3.2), q * (1 + pu * 3.2));
+      if (!full) return null;
+    }
+    const A = al * full, up = dl => eb(cl((cam.grow * 1.75 - dl) / .75)), dim = 1 - .82 * st(2, 14, s);   // the other lights fade as the camera closes on one
+    const quad = (pts, fill, fa, stroke, sa) => { poly(pts); if (fill) { g.globalAlpha = A * fa; g.fillStyle = fill; g.fill(); } if (stroke) { g.globalAlpha = A * sa; g.strokeStyle = stroke; g.stroke(); } };
+    g.lineWidth = 1; g.lineJoin = 'round';
+    quad([pj(-.5, 0, -.5), pj(.5, 0, -.5), pj(.5, 0, .5), pj(-.5, 0, .5)], C.ground, .94, C.ink, .9);
+    g.strokeStyle = C.ink2; g.globalAlpha = A * .22; g.beginPath();
+    for (let k = -4; k <= 4; k++) { let p = pj(k * .1, 0, -.5), q = pj(k * .1, 0, .5); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); p = pj(-.5, 0, k * .1); q = pj(.5, 0, k * .1); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+    g.stroke();
+    quad([pj(-.33, 0, -.24), pj(.33, 0, -.24), pj(.33, 0, .24), pj(-.33, 0, .24)], C.panel, 1, C.ink2, .8);
+    g.globalAlpha = A * .8; g.strokeStyle = C.ink; g.beginPath();           // corner marks outside the plate
+    [-1, 1].forEach(i => [-1, 1].forEach(j => { const a = pj(i * .56, 0, j * .46), c = pj(i * .56, 0, j * .56), e = pj(i * .46, 0, j * .56); g.moveTo(a[0], a[1]); g.lineTo(c[0], c[1]); g.lineTo(e[0], e[1]); }));
+    g.stroke();
+    WIRES.forEach(([a, b], n) => {                                         // power lines, with a pulse running to the hall
+      const p = pj(a[0], 0, a[1]), q = pj(b[0], 0, b[1]), u = (t * .7 + n * .37) % 1, d = Math.max(1.5, W2 * .006);
+      g.globalAlpha = A * .7; g.strokeStyle = C.ink2; seg(p, q);
+      g.globalAlpha = A * cam.grow; g.fillStyle = C.acc; g.fillRect(mix(p[0], q[0], u) - d, mix(p[1], q[1], u) - d, d * 2, d * 2);
+    });
+    const box = (x, z, w, d, h) => {
+      const x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2, xs = cam.sy >= 0 ? x1 : x0;
+      quad([pj(xs, 0, z0), pj(xs, 0, z1), pj(xs, h, z1), pj(xs, h, z0)], C.ghost, 1, C.ink, 1);
+      quad([pj(x0, 0, z1), pj(x1, 0, z1), pj(x1, h, z1), pj(x0, h, z1)], C.panel, 1, C.ink, 1);
+      quad([pj(x0, h, z0), pj(x1, h, z0), pj(x1, h, z1), pj(x0, h, z1)], C.ground, 1, C.ink, 1);
+    };
+    let gate = null;
+    SITE3.map(o => [pj(o.x, 0, o.z)[2], o]).sort((a, b) => a[0] - b[0]).forEach(([, o]) => {
+      const k = up(o.dl);
+      if (o.t === 'rack') {
+        const h = RK.h * k, fw = RK.w * W2;
+        box(o.x, o.z, RK.w, RK.d, h);
+        if (fw < 9 || k < .5) return;
+        const e = Math.max(.8, LED.e * W2);
+        for (let c = 0; c < 3; c++) for (let r = 0; r < 8; r++) {
+          const hit = o.id === TARGET && c === 1 && r === 3, n = o.id * 24 + c * 8 + r, lit = hash(n, (t * 4 + hash(n) * 4) | 0);
+          if (!hit && lit < .45) continue;
+          const p = pj(o.x + (c - 1) * RK.w * .26, h * (.86 - r * .105), o.z + RK.d / 2);
+          g.globalAlpha = hit ? A : A * dim; g.fillStyle = hit || lit > .93 ? C.acc : C.ink2; g.fillRect(p[0] - e, p[1] - e, e * 2, e * 2);
+          if (hit) gate = { p, e };
+        }
+      } else if (o.t === 'tower') {
+        const b = pj(o.x, 0, o.z), tp = pj(o.x, o.h * k, o.z), r0 = o.r * W2, r1 = r0 * .78;
+        quad([[b[0] - r0, b[1]], [b[0] + r0, b[1]], [tp[0] + r1, tp[1]], [tp[0] - r1, tp[1]]], C.panel, 1);
+        g.globalAlpha = A; g.fillStyle = C.panel; g.strokeStyle = C.ink; oval(b, r0, r0 * cam.sp); g.fill();
+        oval(b, r0, r0 * cam.sp, 0, 0, Math.PI); g.stroke(); seg([b[0] - r0, b[1]], [tp[0] - r1, tp[1]]); seg([b[0] + r0, b[1]], [tp[0] + r1, tp[1]]);
+        g.fillStyle = C.ground; oval(tp, r1, r1 * cam.sp); g.fill(); g.stroke();
+        for (let j = 0; j < 3; j++) { const u = (t * .3 + j / 3) % 1, c = pj(o.x, o.h * k + u * .1, o.z); g.globalAlpha = A * k * (1 - u) * .7; g.strokeStyle = C.ink2; oval(c, r1 * (.7 + u), r1 * (.7 + u) * cam.sp); g.stroke(); }
+      } else if (o.t === 'solar') {
+        const tl = .55 * cl(k), w = .06, len = .075, zf = o.z + len / 2, zb = zf - len * Math.cos(tl), yb = .006 + len * Math.sin(tl);
+        const pts = [pj(o.x - w / 2, .006, zf), pj(o.x + w / 2, .006, zf), pj(o.x + w / 2, yb, zb), pj(o.x - w / 2, yb, zb)];
+        g.globalAlpha = A; g.strokeStyle = C.ink; seg(pj(o.x, yb, zb), pj(o.x, 0, zb));
+        quad(pts, C.ground, 1); quad(pts, C.acc, .26, C.ink, 1);
+        g.globalAlpha = A * .6; seg([(pts[0][0] + pts[3][0]) / 2, (pts[0][1] + pts[3][1]) / 2], [(pts[1][0] + pts[2][0]) / 2, (pts[1][1] + pts[2][1]) / 2]);
+      } else if (o.t === 'mast') {
+        const b = pj(o.x, 0, o.z), tp = pj(o.x, o.h * k, o.z);
+        g.globalAlpha = A; g.strokeStyle = C.ink; g.lineWidth = 1.4; seg(b, tp); g.lineWidth = 1;
+        [.35, .6, .85].forEach(f => { const c = pj(o.x, o.h * k * f, o.z), hw = W2 * .02 * (1.1 - f); seg([c[0] - hw, c[1]], [c[0] + hw, c[1]]); });
+        if ((t * 2 | 0) % 2) { const d = Math.max(1.5, W2 * .007); g.fillStyle = C.acc; g.fillRect(tp[0] - d, tp[1] - d, d * 2, d * 2); }
+      } else if (o.t === 'pad') {
+        const c = pj(o.x, 0, o.z), r = o.r * W2 * cl(k);
+        g.globalAlpha = A * .9; g.strokeStyle = C.ink; oval(c, r, r * cam.sp); g.stroke(); oval(c, r * .55, r * .55 * cam.sp); g.stroke();
+        seg(pj(o.x - o.r * .3, 0, o.z), pj(o.x + o.r * .3, 0, o.z)); seg(pj(o.x, 0, o.z - o.r * .3), pj(o.x, 0, o.z + o.r * .3));
+      } else box(o.x, o.z, o.w, o.d, o.h * k);
+    });
+    if (gate && G.B > 230 && s > .7 && s < 6) {
+      const fade = al * (1 - st(2.2, 5, s));
+      brackets(gate.p, Math.max(8, RK.w * W2 * .55), C.acc, fade * st(9.0, 9.3, t));
+      callout([gate.p[0] + RK.w * W2 * .55, gate.p[1] - RK.w * W2 * .55], 40, -34, ['RACK 17 / PROTO', 'ONE PROCESS RUNNING'], fade * st(8.2, 8.6, t));
+      callout(pj(-.5, 0, 0), -24, 30, ['SOLAR FIELD', 'CLOSED LOOP'], fade * st(7.9, 8.3, t) * .9);
+    }
+    return gate;
+  }
+
+  /* ----- beat 4: the digital world, through the stand-in's camera ----- */
+  const STREAM = Array.from({ length: 34 }, () => ({ x: (rnd() < .5 ? -1 : 1) * (1.25 + rnd() * 6.5), z: -14 + rnd() * 16, v: .6 + rnd() * 1.4, o: rnd() * 5, n: 5 + (rnd() * 9 | 0), keep: rnd() < .2 }));
+  const TAPE = [[-.86, 1.5, -.4, .08], [.84, .58, .4, .065], [.8, 1.42, -.9, .05]].map(([x, y, z, r], i) => ({ x, y, z, r, o: i * 1.7 }));
+  const MOTE = Array.from({ length: 18 }, () => ({ x: (rnd() - .5) * 4.6, z: (rnd() - .5) * 3, o: rnd() * 2.6, v: .08 + rnd() * .1 }));
+  function world(G, t, amb) {
+    const t3 = t - T_FLY, fly = eo(t3 / 2.4), q = .5 * Math.pow(1 - fly, 1.5), k = mix(.5, 1, fly), zo = 34 * Math.pow(1 - fly, 2);
+    /* The stand-in's orthographic camera, plus a perspective term q that is wound down to zero as the flight ends. */
+    const pr = (x, y, z) => { const yy = y - .9436, dv = yy * SP + z * CP, f = k / Math.max(.08, 1 - q * dv); return [G.ox + x * G.S * f, G.cy - (yy * CP - z * SP) * G.S * f, dv, f]; };
+    const gs = .5, N = 14, reach = 5.5 + 40 * q, zmax = Math.min(6, q > .001 ? (.9 / q + .16) / CP : 6), j0 = Math.ceil((-reach - zo % gs) / gs), j1 = Math.floor((zmax - zo % gs) / gs);
+    const line = [[], [], [], []], put = (x1, z1, x2, z2) => { const d = Math.hypot((x1 + x2) / 2, (z1 + z2) / 2) / reach; if (d < 1) line[Math.min(3, d * 4 | 0)].push(pr(x1, 0, z1), pr(x2, 0, z2)); };
+    for (let j = j0; j <= j1; j++) { const z = j * gs + zo % gs; for (let i = -N; i < N; i++) put(i * gs, z, (i + 1) * gs, z); if (j < j1) for (let i = -N; i <= N; i++) put(i * gs, z, i * gs, z + gs); }
+    if (fly < 1) {                                                         // frames rushing past: the way in
+      const c = [mix(G.A[0], G.ox, fly), mix(G.A[1], G.cy, fly)], m = Math.max(cw, ch);
+      for (let n = 0; n < 7; n++) {
+        const u = (((t3 * .9 + n / 7) % 1) + 1) % 1, r = (.03 + Math.pow(u, 2.4) * .9) * m;
+        g.globalAlpha = (1 - fly) * Math.sin(u * Math.PI) * .7; g.strokeStyle = n % 3 ? C.ink2 : C.acc; g.lineWidth = 1 + u * 1.5; g.strokeRect(c[0] - r, c[1] - r * .62, r * 2, r * 1.24);
+      }
+    }
+    g.strokeStyle = C.line; g.lineWidth = 1;
+    line.forEach((pts, b) => { g.globalAlpha = mix(.85, .5, amb) * [1, .7, .42, .2][b]; g.beginPath(); for (let i = 0; i < pts.length; i += 2) { g.moveTo(pts[i][0], pts[i][1]); g.lineTo(pts[i + 1][0], pts[i + 1][1]); } g.stroke(); });
+    if (q > .01) { g.globalAlpha = cl(q * 3); g.strokeStyle = C.ink2; seg([G.ox - G.S * 9, G.cy], [G.ox + G.S * 9, G.cy]); }   // horizon, while there is one
+
+    STREAM.forEach(s => {                                                  // falling columns of data
+      const a = s.keep ? mix(.8, .3, amb) : .8 * (1 - amb), z = ((s.z + zo + 14) % 16) - 14;
+      if (a < .02) return;
+      for (let m = 0; m < s.n; m++) {
+        const y = 4.6 - (((s.o + t * s.v - m * .17) % 4.6) + 4.6) % 4.6, p = pr(s.x, y, z);
+        if (q * p[2] > .85) continue;
+        const d = Math.max(1.5, .034 * G.S * p[3]);
+        g.globalAlpha = a * (1 - m / s.n); g.fillStyle = m ? C.ink2 : C.acc; g.fillRect(p[0] - d / 2, p[1] - d / 2, d, d);
+      }
+    });
+    if (amb > 0) {
+      const c = pr(0, 0, 0);
+      for (let n = 0; n < 2; n++) {                                        // pulses running out across the floor
+        const u = ((t - T_SCAN) / 3.6 + n * .5) % 1; if (u < 0) continue;
+        g.globalAlpha = amb * Math.pow(1 - u, 2) * .55; g.strokeStyle = C.acc; g.lineWidth = 1.2; oval(c, u * 5 * G.S, u * 5 * G.S * SP); g.stroke();
+      }
+      g.fillStyle = C.ink2;
+      MOTE.forEach(m => { const y = (m.o + t * m.v) % 2.6, p = pr(m.x, y, m.z); g.globalAlpha = amb * Math.sin(y / 2.6 * Math.PI) * .5; g.fillRect(p[0] - 1.5, p[1] - 1.5, 3, 3); });
+    }
+    TAPE.forEach(o => {                                                    // cube tapes adrift
+      const p = pr(o.x, o.y + .05 * Math.sin(t * .8 + o.o), o.z), a = st(.5, 1.6, t3) * mix(1, .6, amb);
+      if (a > 0) cube(p, o.r * G.S * p[3], t * .35 + o.o, .5, a, C.ground, C.ink2);
+    });
+    return pr;
+  }
+
+  /* ----- beat 5: blocks travel in along the axes and stack into the figure ----- */
+  const VOX = [];
+  BN.forEach(([a, b, r]) => {
+    const A = JN[a], d = sub(JN[b], A), n = Math.max(2, Math.round(Math.hypot(d[0], d[1], d[2]) / .042)), m = r > .09 ? 4 : r > .06 ? 2 : 1;
+    for (let k = 0; k < n; k++) for (let j = 0; j < m; j++) {
+      const c = add(A, mul(d, (k + .5) / n)), p = [c[0] + (rnd() - .5) * r * 1.3, c[1], c[2] + (rnd() - .5) * r * 1.3].map(v => Math.round(v / .04) * .04);
+      VOX.push({ p, s: [(rnd() - .5) * 9, .2 + rnd() * 3.6, -3 - rnd() * 9], d: p[1] / 1.9 * .7 + rnd() * .2, acc: rnd() < .12 });
+    }
+  });
+  function voxels(G, pr, t, scanY) {
+    const size = Math.max(3, .036 * G.S);
+    const where = (v, u) => { const e = ry(v.p, G.th), a = eio(u * 3), b = eio(u * 3 - 1), c = eio(u * 3 - 2); return pr(mix(v.s[0], e[0], a), mix(v.s[1], e[1], c), mix(v.s[2], e[2], b)); };
+    VOX.map(v => { const u = cl((t - T_VOX - v.d) / .8); return u > 0 ? [v, u, where(v, u)] : null; }).filter(Boolean).sort((a, b) => a[2][2] - b[2][2]).forEach(([v, u, p]) => {
+      if (p[1] < scanY) return;                                            // already replaced by the real figure above the scan line
+      const d = size * p[3];
+      if (u < 1) { const o = where(v, Math.max(0, u - .07)); g.globalAlpha = .45; g.strokeStyle = v.acc ? C.acc : C.ink2; g.lineWidth = 1; seg(o, p); }
+      g.globalAlpha = 1; g.fillStyle = v.acc && u < 1 ? C.acc : u < 1 ? C.ground : C.lit; g.strokeStyle = u < 1 ? C.ink : C.shade; g.lineWidth = 1;
+      g.fillRect(p[0] - d / 2, p[1] - d / 2, d, d); g.strokeRect(p[0] - d / 2, p[1] - d / 2, d, d);
+    });
+  }
+  function tear(t) {                                                       // a few torn rows as the camera goes through the light
+    const a = st(10.3, 10.5, t) * (1 - st(10.75, 11, t));
+    if (a <= 0) return;
+    const f = t * 22 | 0;
+    for (let n = 0; n < 6; n++) {
+      const y = hash(n, f) * ch, h = 4 + hash(n + 9, f) * 34, dx = (hash(n + 20, f) - .5) * 90 * a;
+      g.globalAlpha = 1; g.drawImage(cv, 0, y * cd, cv.width, h * cd, dx, y, cw, h);
+      g.globalAlpha = a * .8; g.fillStyle = n % 2 ? C.glA : C.glB; g.fillRect(hash(n + 31, f) * cw * .7, y + h, cw * .3 * hash(n + 40, f), 2);
+    }
+  }
+
+  /* ----- placing, timing, drawing ----- */
+  let cw = 0, ch = 0, cd = 1, t = -.35, last = 0, rafL = 0, done = false, beat = -1, lastY = -1, odd = false;
+  function fit() {
+    const bg = wide.matches;
+    if (!cv.parentNode || bg !== cv.classList.contains('lore--bg')) { cv.classList.toggle('lore--bg', bg); (bg ? document.body : stage).prepend(cv); }
+    cw = cv.clientWidth; ch = cv.clientHeight;
+    cd = Math.min(2, devicePixelRatio || 1, Math.sqrt(5e6 / Math.max(1, cw * ch)));
+    cv.width = Math.round(cw * cd); cv.height = Math.round(ch * cd);
+  }
+  function geometry(now) {
+    const sr = stage.getBoundingClientRect(), cr = cv.getBoundingClientRect(), x0 = sr.left - cr.left, y0 = sr.top - cr.top;
+    const S = Math.min(H * .41, W * .62), ox = x0 + W * (W < 560 ? .58 : .5), oy = y0 + H * .5 + S * .93;
+    const sec = still.matches ? 1.25 : now / 1000, fr = useVideo ? vids[0].currentTime * 24 : (sec * 24) % 240;
+    /* The first three beats are centred on the part of the stage that is on screen, kept between the figure's hips and shoulders. */
+    const seen = (Math.max(sr.top, hdr.getBoundingClientRect().bottom) + Math.min(sr.bottom, innerHeight)) / 2 - cr.top;
+    return { S, ox, oy, y0, cy: oy - .9436 * CP * S, th: fr / 240 * TAU - .55, B: S * 1.2, A: [ox, cl(seen, oy - 1.5 * CP * S, oy - .95 * CP * S)] };
+  }
+  function caption() {
+    let i = 0; while (i < 4 && t >= BEAT[i + 1]) i++;
+    if (done) i = 5;
+    if (i === beat) return;
+    beat = i;
+    stage.toggleAttribute('data-lore', !done);                             // while it plays, its caption takes the viewport read-out's place
+    capEl.hidden = done || still.matches; again.hidden = !done || still.matches;
+    if (done) return;
+    num.textContent = '0' + (i + 1); ttl.dataset.i18n = 'lore.' + (i + 1);
+    if (ttl._sc) ttl._txt = tr(ttl.dataset.i18n); else ttl.textContent = tr(ttl.dataset.i18n);
+    scramble(ttl);
+  }
+  function render(now) {
+    if (!cw || !ch || !W || !H) return;
+    const G = geometry(now);
+    g.setTransform(cd, 0, 0, cd, 0, 0); g.clearRect(0, 0, cw, ch); g.lineCap = 'butt'; g.lineJoin = 'miter'; g.setLineDash([]);
+    const Z = zoomAt(t), s0 = Math.exp(Z), s1 = s0 * R0, s2 = s1 * R1, grow = (T, e, s) => [T[0] * (1 - (1 - e) / Math.max(1, s)), T[1] * (1 - (1 - e) / Math.max(1, s))];
+    const rev = done ? 1 : cl((t - T_SCAN) / .8), amb = done ? 1 : st(12.2, END, t);
+    const floorY = reveal.getBoundingClientRect().bottom - cv.getBoundingClientRect().top;   // nothing is drawn below the reveal row, so the credits stay clean
+    let pr = null;
+    g.save(); g.beginPath(); g.rect(0, 0, cw, Math.min(ch, floorY)); g.clip();
+    if (t < T_VOX) {
+      /* Each scene's target drifts to the anchor as the zoom closes on it; the next scene is drawn at that target. */
+      const c0 = grow(T0, st(.15, .15 + Z1 * .75, Z), s0), O1 = [G.A[0] + (T0[0] - c0[0]) * s0 * G.B, G.A[1] + (T0[1] - c0[1]) * s0 * G.B];
+      const T1 = moonTarget(t), c1 = grow(T1, st(.15, .15 + (Z2 - Z1) * .75, Z - Z1), s1), M = [O1[0] - c1[0] * s1 * G.B, O1[1] - c1[1] * s1 * G.B];
+      const cam = siteCam(t, Z), c2 = grow(cam.T, st(.15, .15 + DIVE * .75, Z - Z2), s2);
+      const O2 = [M[0] + (T1[0] - c2[0] * R1) * s1 * G.B, M[1] + (T1[1] - c2[1] * R1) * s1 * G.B];
+      const a0 = 1 - st(5, 26, s0), a1 = 1 - st(4, 14, s1);
+      if (a0 > 0) system(G, s0, c0, a0 * st(-.35, .1, t), Math.max(0, t));
+      if (a1 > 0) moon(G, M, s1, a1, t);
+      const gate = site(G, O2, s2, st(2.62, 2.9, t) * (s2 < .1 ? st(0, .2, T1[2]) : 1), t, cam);
+      if (gate && t > T_FLY - .2) {                                        // the light is a window: the digital world shows through it as it grows
+        g.save(); g.beginPath(); g.rect(gate.p[0] - gate.e, gate.p[1] - gate.e, gate.e * 2, gate.e * 2); g.clip();
+        g.globalAlpha = 1; g.fillStyle = C.ground; g.fillRect(0, 0, cw, ch);
+        pr = world(G, t, 0); g.restore();
+        g.globalAlpha = 1; g.strokeStyle = C.acc; g.lineWidth = Math.min(6, 1 + gate.e * .04); g.strokeRect(gate.p[0] - gate.e, gate.p[1] - gate.e, gate.e * 2, gate.e * 2);
+      }
+    } else pr = world(G, t, amb);
+    if (pr && rev < 1) voxels(G, pr, t, G.y0 + rev * H);
+    tear(t);
+    g.restore(); g.globalAlpha = 1;
+    fig.style.clipPath = rev >= 1 ? '' : 'inset(0 0 ' + ((1 - rev) * 100).toFixed(2) + '% 0)';
+    bar.hidden = !(rev > 0 && rev < 1); bar.style.top = (rev * 100).toFixed(2) + '%';
+    caption();
+  }
+  const live = () => !still.matches && current === 'home' && !document.hidden && (onScreen || !done);
+  function tick(now) {
+    rafL = 0;
+    const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now;
+    if (!still.matches) t += dt;
+    if (!done && (t >= END || still.matches)) finish();
+    odd = !odd;
+    if (!done || odd || scrollY !== lastY) { lastY = scrollY; render(now); }   // once it has settled, every other frame is enough unless the page is moving
+    if (live()) rafL = requestAnimationFrame(tick);
+  }
+  function wake() { if (!rafL) { last = performance.now(); rafL = requestAnimationFrame(tick); } }
+  function finish() { done = true; t = Math.max(t, END); if (when === 'once') store.set('lore', '1'); }
+  skip.addEventListener('click', () => { finish(); wake(); });
+  again.addEventListener('click', () => { done = false; t = 0; beat = -1; wake(); });
+
+  if (still.matches || (when === 'once' && store.get('lore') === '1')) finish();
+  else fig.style.clipPath = 'inset(0 0 100% 0)';
+  fit();
+  const refit = () => { fit(); wake(); };
+  wide.addEventListener('change', refit); addEventListener('resize', refit);
+  addEventListener('scroll', wake, { passive: true });
+  document.addEventListener('visibilitychange', wake); document.addEventListener('viewchange', refit);
+  new MutationObserver(wake).observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-accent'] });
+  darkMq.addEventListener('change', wake);
+  return { wake };
+})();
+
 /* ---------- start ---------- */
 const th0 = store.get('theme');
 if (th0 === 'dark' || th0 === 'light') root.dataset.theme = th0;
@@ -1307,6 +1820,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { me
 const h0 = location.hash.slice(1);
 if (h0 !== 'home' && known(h0)) show(h0);
 resize(); draw(performance.now()); kick();
+if (lore) lore.wake();
 })();
 </script>
 </body>
