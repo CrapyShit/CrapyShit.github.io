@@ -147,14 +147,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 }
 
 /* ---------- hero band ---------- */
-.gap-row{height:clamp(1.25rem,4.5vw,5rem)}
-.band{position:relative;padding-block:clamp(1.6rem,3.2vw,3.2rem) 0;overflow:hidden}
+.gap-row{height:clamp(.5rem,1.4vw,1.5rem)}
+.band{position:relative;padding-block:clamp(1.1rem,2vw,2rem) 0;overflow:hidden}
 .band > .dot{position:absolute}
 .band > .dot:nth-of-type(1){left:var(--pad);top:1rem}
 .band > .dot:nth-of-type(2){right:var(--pad);top:1rem}
 .band > .dot:nth-of-type(3){right:var(--pad);bottom:1.35rem}
 .mq{display:flex;width:max-content;animation:mq 46s linear infinite}
-.mq span{font-size:clamp(4.25rem,17vw,17rem);white-space:nowrap;padding-right:.32em}
+.mq span{font-size:clamp(3.75rem,13.5vw,13.5rem);white-space:nowrap;padding-right:.32em}
 .mq span::after{content:"";display:inline-block;width:.16em;height:.16em;margin-left:.32em;background:var(--accent);vertical-align:.28em}
 @keyframes mq{to{transform:translateX(-50%)}}
 .band-l{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1.6rem;padding:1.1rem var(--pad) 1rem;font-size:.875rem;letter-spacing:.06em;text-transform:uppercase}
