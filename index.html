@@ -169,7 +169,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .stage{position:sticky;top:calc(var(--hdr) + env(safe-area-inset-top,0px));height:46vh;height:46svh;z-index:3;
   background:var(--ground);border-block:1px solid var(--line);overflow:hidden}
 .stage canvas,.stage video{position:absolute;inset:0;width:100%;height:100%}
-.stage video{object-fit:contain}
+.stage video{object-fit:cover}
 .hud{position:absolute;left:var(--pad);top:1rem;display:grid;gap:.2rem;max-width:15rem;z-index:2}
 .hud-n{font-size:.75rem;letter-spacing:.06em;color:var(--ink-2);font-variant-numeric:tabular-nums}
 .hud-m{font-family:var(--display);font-weight:700;font-size:1.2rem;text-transform:uppercase;line-height:1.05}
@@ -668,7 +668,7 @@ const SITE = {
   email: 'jeanfkh@gmail.com',
   links: [['LinkedIn', 'https://www.linkedin.com/in/jean-fran%C3%A7ois-kharrat/'], ['ArtStation', 'https://www.artstation.com/jeanfkh'],
     ['YouTube', 'https://youtube.com/@jfk4852'], ['GitHub', 'https://github.com/CrapyShit']],
-  media: { shaded: '', wire: '', skeleton: '', controls: '', reel: 'https://youtu.be/6N0kjsM0SSk' },   // reel: a YouTube link or a video file
+  media: { shaded: 'media/stage/Anime_V02.webm', wire: '', skeleton: '', controls: '', reel: 'https://youtu.be/6N0kjsM0SSk' },   // reel: a YouTube link or a video file; empty stage layers reuse the shaded clip
   intro: 'always', // the origin sequence behind the home page: 'always' plays on every load, 'once' once per browser, 'off' never
   cv: '',          // path to your CV PDF
   emptyTiles: 8    // the Work page pads its grid with empty slots up to this many tiles; set to 0 once it is full
@@ -1109,13 +1109,14 @@ document.addEventListener('click', e => {
 $('#to-top').addEventListener('click', e => { e.preventDefault(); scrollTo({ top: 0, behavior: still.matches ? 'auto' : 'smooth' }); });
 
 /* ---------- rig reveal: a pinned stage whose four layers cross-fade with scroll ----------
-   Each layer is a canvas (the stand-in figure) or, once SITE.media has all four paths, a video.
+   Each layer is a canvas (the stand-in figure) or, once SITE.media has a shaded clip, a video
+   (a layer without its own clip plays the shaded one).
    Between modes a scan line travels down the stage: above it the next layer, below it the current one. */
 const stage = $('#stage'), reveal = $('#reveal'), mark = $('#mark');
 const layers = $$('canvas[data-layer]', stage), vids = $$('video[data-layer]', stage);
 const ctxs = layers.map(c => c.getContext('2d'));
 const gim = $('#gimbal'), gctx = gim.getContext('2d'), scan = $('#scan');
-const srcs = [SITE.media.shaded, SITE.media.wire, SITE.media.skeleton, SITE.media.controls];
+const srcs = [SITE.media.shaded, SITE.media.wire, SITE.media.skeleton, SITE.media.controls].map(s => s || SITE.media.shaded);
 const useVideo = srcs.every(Boolean);
 let C = {};
 function readColours() {
