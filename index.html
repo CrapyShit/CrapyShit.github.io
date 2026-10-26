@@ -668,7 +668,12 @@ const SITE = {
   email: 'jeanfkh@gmail.com',
   links: [['LinkedIn', 'https://www.linkedin.com/in/jean-fran%C3%A7ois-kharrat/'], ['ArtStation', 'https://www.artstation.com/jeanfkh'],
     ['YouTube', 'https://youtube.com/@jfk4852'], ['GitHub', 'https://github.com/CrapyShit']],
-  media: { shaded: 'media/stage/Anime_V02.webm', wire: '', skeleton: '', controls: '', reel: 'https://youtu.be/6N0kjsM0SSk' },   // reel: a YouTube link or a video file; empty stage layers reuse the shaded clip
+  media: {   // stage layers: one clip, or { dark, light } to follow the theme; empty layers reuse the shaded clip
+    shaded: { dark: 'media/stage/oni_dark_final.webm', light: 'media/stage/oni_light_final.webm' },
+    wire: { dark: 'media/stage/oni_dark_wire.webm', light: 'media/stage/oni_light_wire.webm' },
+    skeleton: { dark: 'media/stage/oni_dark_skeleton.webm', light: 'media/stage/oni_light_skeleton.webm' },
+    controls: '',
+    reel: 'https://youtu.be/6N0kjsM0SSk' },   // reel: a YouTube link or a video file
   intro: 'always', // the origin sequence behind the home page: 'always' plays on every load, 'once' once per browser, 'off' never
   cv: '',          // path to your CV PDF
   emptyTiles: 8    // the Work page pads its grid with empty slots up to this many tiles; set to 0 once it is full
@@ -1117,6 +1122,7 @@ const layers = $$('canvas[data-layer]', stage), vids = $$('video[data-layer]', s
 const ctxs = layers.map(c => c.getContext('2d'));
 const gim = $('#gimbal'), gctx = gim.getContext('2d'), scan = $('#scan');
 const srcs = [SITE.media.shaded, SITE.media.wire, SITE.media.skeleton, SITE.media.controls].map(s => s || SITE.media.shaded);
+const srcFor = s => (s && typeof s === 'object' ? s[isDark() ? 'dark' : 'light'] || s.dark || s.light : s);
 const useVideo = srcs.every(Boolean);
 let C = {};
 function readColours() {
@@ -1313,7 +1319,14 @@ $$('#steps button').forEach(b => b.addEventListener('click', () => {
   scrollTo({ top: range.s0 + p * (range.s1 - range.s0), behavior: still.matches ? 'auto' : 'smooth' });
 }));
 if (useVideo) {
-  vids.forEach((v, i) => { v.src = srcs[i]; v.hidden = false; v.play().catch(() => { /* autoplay refused: stays on first frame */ }); });
+  vids.forEach((v, i) => { v.src = srcFor(srcs[i]); v.hidden = false; v.play().catch(() => { /* autoplay refused: stays on first frame */ }); });
+  new MutationObserver(() => {                       // theme switch: swap to that theme's clips, keep the playhead
+    const t = vids[0].currentTime;
+    vids.forEach((v, i) => {
+      const n = new URL(srcFor(srcs[i]), location.href).href;
+      if (v.src !== n) { v.src = n; v.addEventListener('loadedmetadata', () => { v.currentTime = t; v.play().catch(() => {}); }, { once: true }); }
+    });
+  }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
   layers.forEach(c => { c.hidden = true; }); $('#ph').hidden = true;
   setInterval(() => { const t = vids[0].currentTime; vids.slice(1).forEach(v => { if (Math.abs(v.currentTime - t) > .06) v.currentTime = t; }); }, 2000);
 }
