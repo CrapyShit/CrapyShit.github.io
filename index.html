@@ -169,7 +169,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .stage{position:sticky;top:calc(var(--hdr) + env(safe-area-inset-top,0px));height:46vh;height:46svh;z-index:3;
   background:var(--ground);border-block:1px solid var(--line);overflow:hidden}
 .stage canvas,.stage video{position:absolute;inset:0;width:100%;height:100%}
-.stage video{object-fit:cover}
+.stage video{object-fit:contain}   /* contain: the whole body stays in frame at any stage aspect */
 .hud{position:absolute;left:var(--pad);top:1rem;display:grid;gap:.2rem;max-width:15rem;z-index:2}
 .hud-n{font-size:.75rem;letter-spacing:.06em;color:var(--ink-2);font-variant-numeric:tabular-nums}
 .hud-m{font-family:var(--display);font-weight:700;font-size:1.2rem;text-transform:uppercase;line-height:1.05}
