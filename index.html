@@ -8,6 +8,12 @@
 <meta property="og:title" content="Jeff Kharrat Portfolio">
 <meta property="og:description" content="Character rigging and technical animation, Maya and Unreal Engine 5.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://crapyshit.github.io/">
+<meta property="og:image" content="https://crapyshit.github.io/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Jeff Kharrat, character rigging and technical animation">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="favicon.ico?v=2" sizes="32x32">
 <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -413,8 +419,6 @@ body[data-view="page"] .lore--bg{display:none}
     <nav class="nav" id="nav" aria-label="Main">
       <a href="#work" data-route="work" data-glitch><span class="t" data-i18n="nav.work">Work</span></a>
       <a href="#reel" data-open="dlg-reel" data-glitch><span class="t" data-i18n="nav.reel">Reel</span></a>
-      <a href="#tools" data-route="tools" data-glitch><span class="t" data-i18n="nav.tools">Tools</span></a>
-      <a href="#skills" data-route="skills" data-glitch><span class="t" data-i18n="nav.skills">Skill tree</span></a>
       <a href="#about" data-route="about" data-glitch><span class="t" data-i18n="nav.about">About</span></a>
     </nav>
     <div class="lang" role="group" aria-label="Language">
@@ -482,7 +486,6 @@ body[data-view="page"] .lore--bg{display:none}
 
         <div class="side">
           <div class="tile brk"><canvas id="gimbal"></canvas></div>
-          <p class="label" data-i18n="side.slot">Detail loop slot, 1:1</p>
         </div>
 
         <div class="strip">
@@ -531,8 +534,6 @@ body[data-view="page"] .lore--bg{display:none}
           <ul class="links">
             <li><a href="#work" data-route="work" data-i18n="nav.work">Work</a></li>
             <li><a href="#reel" data-open="dlg-reel" data-i18n="nav.reel">Reel</a></li>
-            <li><a href="#tools" data-route="tools" data-i18n="nav.tools">Tools</a></li>
-            <li><a href="#skills" data-route="skills" data-i18n="nav.skills">Skill tree</a></li>
             <li><a href="#about" data-route="about" data-i18n="nav.about">About</a></li>
             <li><a href="#contact" data-open="dlg-contact" data-i18n="nav.contact">Contact</a></li>
           </ul>
@@ -631,11 +632,10 @@ body[data-view="page"] .lore--bg{display:none}
   <div class="dlg-b">
     <div>
       <p class="label" data-i18n="ct.email">Email</p>
-      <p class="mail"><b id="mail">[YOUR EMAIL]</b><button class="btn btn--line" type="button" id="copy"><span data-i18n="ct.copy">Copy</span></button></p>
+      <p class="mail"><b id="mail">jeanfkh@gmail.com</b><button class="btn btn--line" type="button" id="copy"><span data-i18n="ct.copy">Copy</span></button></p>
     </div>
     <div><p class="label" data-i18n="ct.links">Elsewhere</p><ul class="links" data-links></ul></div>
     <div><p class="label" data-i18n="ct.where">Based in</p><p data-i18n="ct.loc">Tokyo, Japan (JST, UTC+9)</p></div>
-    <div><p class="label" data-i18n="ct.avail">Availability</p><p>[AVAILABILITY]</p></div>
   </div>
 </dialog>
 
@@ -676,7 +676,7 @@ const SITE = {
     reel: 'https://youtu.be/6N0kjsM0SSk' },   // reel: a YouTube link or a video file
   intro: 'always', // the origin sequence behind the home page: 'always' plays on every load, 'once' once per browser, 'off' never
   cv: '',          // path to your CV PDF
-  emptyTiles: 8    // the Work page pads its grid with empty slots up to this many tiles; set to 0 once it is full
+  emptyTiles: 0    // the Work page pads its grid with empty slots up to this many tiles; set to 0 once it is full
 };
 
 /* One entry per project, newest first. The first two also show on the home page.
@@ -684,7 +684,7 @@ const SITE = {
 /* Work page sections, in filter order. A section with no projects yet shows empty slots. */
 const CATS = ['rigs', 'animation', 'tools'];
 
-const PROJECTS = [
+const ALL_PROJECTS = [
   { id: 'fighting', cat: 'animation', year: '', thumb: 'media/fighting/thumb.jpg',
     title: { en: 'Fighting', ja: 'ファイティング' },
     kind: { en: 'Body mechanics exercise', ja: 'ボディメカニクス練習' },
@@ -884,7 +884,8 @@ function renderLinks() {
     const a = document.createElement('a');
     a.href = SITE.cv; a.target = '_blank'; a.rel = 'noopener'; a.textContent = tr('ab.cv');
     cv.append(a);
-  } else cv.textContent = tr('ab.cv') + ' [' + tr('slot.todo') + ']';
+  }
+  cv.hidden = !SITE.cv;
 }
 $('#copy').addEventListener('click', async e => {
   const lab = $('span', e.currentTarget);
@@ -960,8 +961,10 @@ function fillPage(name) {
 }
 const mk = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 const L = o => (o && (o[lang] ?? o.en)) ?? '';
+/* Only projects with a thumbnail or at least one clip are shown; the rest wait as drafts. */
+const PROJECTS = ALL_PROJECTS.filter(p => p.thumb || p.media.some(m => m.src));
 const projOf = name => (name.startsWith('p-') ? PROJECTS.find(p => p.id === name.slice(2)) : null);
-const known = name => name === 'home' || name === 'work' || name === 'about' || !!PAGES[name] || !!projOf(name);
+const known = name => name === 'home' || name === 'work' || name === 'about' || !!projOf(name);   // Tools and Skill tree return when they have content
 let filter = 'all';
 
 /* A media frame: the file if there is one, otherwise a patterned slot that says what goes there. */
@@ -984,7 +987,7 @@ function renderLatest() {
 function renderWork() {
   const chips = $('#chips'), ul = $('#tiles');
   chips.textContent = ''; ul.textContent = '';
-  ['all', ...CATS].forEach(c => {
+  ['all', ...CATS.filter(c => PROJECTS.some(p => p.cat === c))].forEach(c => {
     const b = mk('button', 'chip', tr(c === 'all' ? 'wk.all' : 'cat.' + c));
     b.type = 'button'; b.dataset.cat = c; b.setAttribute('aria-pressed', String(c === filter));
     chips.append(b);
@@ -995,7 +998,7 @@ function renderWork() {
     cap.append(mk('b', '', L(p.title)), mk('span', 'label', [L(p.kind), p.year].filter(Boolean).join(', ')));
     a.append(frame(p.thumb, 'sq', true, L(p.title)), cap); li.append(a); ul.append(li);
   });
-  const pad = filter === 'all' ? SITE.emptyTiles : Math.max(4, list.length);
+  const pad = filter === 'all' ? SITE.emptyTiles : 0;
   for (let i = list.length; i < pad; i++) {
     const li = mk('li'), d = mk('div', 'gtile gtile--empty'), cap = mk('span', 'gcap');
     cap.append(mk('span', 'label', tr('wk.empty')));
@@ -1284,6 +1287,13 @@ function setMode(m) {
   $$('#steps button').forEach((b, i) => { if (i === m) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
   $$('#ticks i').forEach((el, i) => { el.dataset.on = i < m ? 'past' : i === m ? 'now' : ''; });
 }
+/* Stage clips load one at a time: the first on arrival, each next one just before the scroll reaches it. */
+function want(i) {
+  const v = vids[i];
+  if (!useVideo || !v || v.dataset.on) return;
+  v.dataset.on = '1'; v.src = srcFor(srcs[i]);
+  v.addEventListener('loadedmetadata', () => { if (i) v.currentTime = vids[0].currentTime; v.play().catch(() => { /* autoplay refused: stays on first frame */ }); }, { once: true });
+}
 function draw(now) {
   if (!W || !H) return;
   const sec = still.matches ? 1.25 : now / 1000;
@@ -1292,6 +1302,7 @@ function draw(now) {
   view.th = fr / 240 * 6.2832 - .55; view.S = Math.min(H * .41, W * .62); view.ox = W * (W < 560 ? .58 : .5); view.oy = H * .5 + view.S * .93;
   const bones = useVideo ? null : BN.map(([a, b, r, s]) => ({ A: JN[a], B: JN[b], a: P(JN[a]), b: P(JN[b]), r, s }))
     .sort((p, q) => (p.a[2] + p.b[2]) - (q.a[2] + q.b[2]));
+  if (useVideo) for (let i = 1; i < 4; i++) if (i <= f + .9) want(i);
   for (let i = 0; i < 4; i++) {
     const el = (useVideo ? vids : layers)[i], on = i === i0 || (i === i0 + 1 && t > 0);
     el.style.opacity = on ? 1 : 0;
@@ -1319,10 +1330,12 @@ $$('#steps button').forEach(b => b.addEventListener('click', () => {
   scrollTo({ top: range.s0 + p * (range.s1 - range.s0), behavior: still.matches ? 'auto' : 'smooth' });
 }));
 if (useVideo) {
-  vids.forEach((v, i) => { v.src = srcFor(srcs[i]); v.hidden = false; v.play().catch(() => { /* autoplay refused: stays on first frame */ }); });
+  vids.forEach(v => { v.hidden = false; v.preload = 'auto'; });
+  want(0);
   new MutationObserver(() => {                       // theme switch: swap to that theme's clips, keep the playhead
     const t = vids[0].currentTime;
     vids.forEach((v, i) => {
+      if (!v.dataset.on) return;                     // not loaded yet: it picks the right theme when it is
       const n = new URL(srcFor(srcs[i]), location.href).href;
       if (v.src !== n) { v.src = n; v.addEventListener('loadedmetadata', () => { v.currentTime = t; v.play().catch(() => {}); }, { once: true }); }
     });
