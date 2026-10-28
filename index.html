@@ -524,11 +524,6 @@ body[data-view="page"] .lore--bg{display:none}
           <dl class="roll">
             <div><dt data-i18n="cr.r1">Rigging and tools</dt><dd>Jeff Kharrat</dd></div>
             <div><dt data-i18n="cr.r2">Software</dt><dd data-soft="Autodesk Maya, Unreal Engine 5, Python">Autodesk Maya, Unreal Engine 5, Python</dd></div>
-            <div><dt data-i18n="cr.r3">Character</dt><dd><span class="plate" role="img" aria-label="Yeff">
-              <svg viewBox="0 0 51 14" aria-hidden="true">
-                <path class="led-off" d="M.12 .5H51M.12 1.5H51M.12 2.5H51M.12 3.5H51M.12 4.5H51M.12 5.5H51M.12 6.5H51M.12 7.5H51M.12 8.5H51M.12 9.5H51M.12 10.5H51M.12 11.5H51M.12 12.5H51M.12 13.5H51"/>
-                <path class="led-on" d="M10.12 3.5h5.76M24.12 3.5h1.76M28.12 3.5h1.76M31.12 3.5h4.76M37.12 3.5h4.76M43.12 3.5h4.76M8.12 4.5h9.76M24.12 4.5h1.76M28.12 4.5h1.76M31.12 4.5h4.76M37.12 4.5h4.76M43.12 4.5h4.76M6.12 5.5h4.76M15.12 5.5h4.76M24.12 5.5h1.76M28.12 5.5h1.76M31.12 5.5h1.76M37.12 5.5h1.76M43.12 5.5h1.76M5.12 6.5h5.76M15.12 6.5h5.76M24.12 6.5h5.76M31.12 6.5h3.76M37.12 6.5h3.76M43.12 6.5h3.76M3.12 7.5h5.76M13.12 7.5h5.76M25.12 7.5h3.76M31.12 7.5h3.76M37.12 7.5h3.76M43.12 7.5h3.76M4.12 8.5h4.76M13.12 8.5h4.76M26.12 8.5h1.76M31.12 8.5h1.76M37.12 8.5h1.76M43.12 8.5h1.76M6.12 9.5h9.76M26.12 9.5h1.76M31.12 9.5h4.76M37.12 9.5h1.76M43.12 9.5h1.76M8.12 10.5h5.76M26.12 10.5h1.76M31.12 10.5h4.76M37.12 10.5h1.76M43.12 10.5h1.76"/>
-              </svg></span></dd></div>
           </dl>
         </section>
         <nav class="c-site" aria-labelledby="st-h">
@@ -687,7 +682,7 @@ const SITE = {
 const CATS = ['rigs', 'animation', 'tools'];
 
 const ALL_PROJECTS = [
-  { id: 'creature-rig', cat: 'rigs', year: '2025', thumb: 'media/creature-rig/thumb.jpg',
+  { id: 'creature-rig', cat: 'rigs', year: '2024.12.01', time: { en: '~1 month', ja: '約1か月' }, thumb: 'media/creature-rig/thumb.jpg',
     title: { en: 'Creature Rigging Master Project', ja: 'クリーチャーリギング 修士制作' },
     kind: { en: "Master's project", ja: '修士制作' },
     role: { en: 'Rigging', ja: 'リギング' },
@@ -697,7 +692,7 @@ const ALL_PROJECTS = [
     media: [
       { label: { en: 'Rigging and animation reel', ja: 'リギング・アニメーションリール' }, src: 'media/creature-rig/creature-rig-reel.mp4' },
       { label: { en: 'Controls, front and side', ja: 'コントローラー（正面・側面）' }, src: 'media/creature-rig/front-side.jpg' }] },
-  { id: 'fighting', cat: 'animation', year: '', thumb: 'media/fighting/thumb.jpg',
+  { id: 'fighting', cat: 'animation', year: '2025.02.01', time: { en: '~20 hours', ja: '約20時間' }, thumb: 'media/fighting/thumb.jpg',
     title: { en: 'Fighting', ja: 'ファイティング' },
     kind: { en: 'Body mechanics exercise', ja: 'ボディメカニクス練習' },
     role: { en: 'Animation', ja: 'アニメーション' },
@@ -739,7 +734,7 @@ const T = {
     'latest.title': 'Latest additions', 'latest.all': 'See all work', 'slot.todo': 'add file',
     'wk.all': 'All', 'wk.empty': 'Empty slot', 'cat.rigs': 'Rigs', 'cat.tools': 'Tools', 'cat.animation': 'Animation',
     'pj.back': 'All work', 'pj.prev': 'Previous', 'pj.next': 'Next',
-    'pj.type': 'Type', 'pj.year': 'Year', 'pj.role': 'Role', 'pj.soft': 'Software',
+    'pj.type': 'Type', 'pj.year': 'Date', 'pj.time': 'Time spent', 'pj.role': 'Role', 'pj.soft': 'Software',
     'ab.bio1': 'I am a rigging artist and technical animator. Through research on 3D animation and rigging, I work on improving the workflow between Maya and Unreal Engine.',
     'ab.bio2': 'Data compatibility and production efficiency between the two are where I kept running into problems, so I have been developing a rigging pipeline that is more intuitive and more flexible.',
     'ab.bio3': 'Next I want to work in Japanese production: using real-time engines for new ways of making animation, and helping build pipelines that are flexible and efficient.',
@@ -773,7 +768,7 @@ const T = {
     'latest.title': '最新の追加', 'latest.all': 'すべての作品を見る', 'slot.todo': 'ファイル未設定',
     'wk.all': 'すべて', 'wk.empty': '空き枠', 'cat.rigs': 'リグ', 'cat.tools': 'ツール', 'cat.animation': 'アニメーション',
     'pj.back': '作品一覧', 'pj.prev': '前へ', 'pj.next': '次へ',
-    'pj.type': '種別', 'pj.year': '制作年', 'pj.role': '担当', 'pj.soft': '使用ソフト',
+    'pj.type': '種別', 'pj.year': '制作日', 'pj.time': '制作期間', 'pj.role': '担当', 'pj.soft': '使用ソフト',
     'ab.bio1': '3Dアニメーションとリギングの研究を通して、MayaとUnreal Engineのワークフローを改善することを目指しています。',
     'ab.bio2': 'これまで、両ソフト間のデータ互換性や制作効率に課題があることを実感し、より直感的で柔軟なリギングパイプラインの開発に取り組んできました。',
     'ab.bio3': '今後は、日本の制作現場での経験を通じて、リアルタイムエンジンを活かした新しい映像制作の形を模索し、柔軟かつ効率的なパイプライン構築に貢献したいと考えています。',
@@ -997,7 +992,7 @@ function renderWork() {
   const list = PROJECTS.filter(p => filter === 'all' || p.cat === filter);
   list.forEach(p => {
     const li = mk('li'), a = link(mk('a', 'gtile'), 'p-' + p.id), cap = mk('span', 'gcap');
-    cap.append(mk('b', '', L(p.title)), mk('span', 'label', [L(p.kind), p.year].filter(Boolean).join(', ')));
+    cap.append(mk('b', '', L(p.title)), mk('span', 'label', [L(p.kind), p.year, L(p.time)].filter(Boolean).join(', ')));
     a.append(frame(p.thumb, 'sq', true, L(p.title)), cap); li.append(a); ul.append(li);
   });
   const pad = filter === 'all' ? SITE.emptyTiles : 0;
@@ -1022,7 +1017,7 @@ $$('[data-soft]').forEach(n => softify(n, n.dataset.soft));
 function renderProject(p) {
   $('#pj-title').textContent = L(p.title);
   const facts = $('#pj-facts'); facts.textContent = '';
-  [['pj.type', L(p.kind)], ['pj.year', p.year], ['pj.role', L(p.role)], ['pj.soft', p.software.join(', ')]].filter(([, v]) => v).forEach(([k, v]) => {
+  [['pj.type', L(p.kind)], ['pj.year', p.year], ['pj.time', L(p.time)], ['pj.role', L(p.role)], ['pj.soft', p.software.join(', ')]].filter(([, v]) => v).forEach(([k, v]) => {
     const d = mk('div'), dd = mk('dd', '', v); if (k === 'pj.soft') softify(dd, v); d.append(mk('dt', '', tr(k)), dd); facts.append(d);
   });
   $('#pj-sum').textContent = L(p.summary);
