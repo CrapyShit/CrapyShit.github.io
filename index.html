@@ -332,6 +332,7 @@ a.gtile:hover b{text-decoration:underline;text-decoration-color:var(--accent);te
 .proj-media{display:grid;gap:var(--pad);align-content:start;padding:var(--pad);background:var(--ground)}
 .shot{display:grid;gap:.5rem}
 .shot .fill{aspect-ratio:auto;object-fit:contain}
+.shot video.fill{aspect-ratio:16/9}   /* reserve the frame before the clip loads */
 @media (min-width:64rem){
   .proj{grid-template-columns:repeat(4,minmax(0,1fr))}
   .proj-info{grid-column:4;grid-row:1;border-bottom:0;background:none}
@@ -685,6 +686,16 @@ const SITE = {
 const CATS = ['rigs', 'animation', 'tools'];
 
 const ALL_PROJECTS = [
+  { id: 'creature-rig', cat: 'rigs', year: '2025', thumb: 'media/creature-rig/thumb.jpg',
+    title: { en: 'Creature Rigging Master Project', ja: 'クリーチャーリギング 修士制作' },
+    kind: { en: "Master's project", ja: '修士制作' },
+    role: { en: 'Rigging', ja: 'リギング' },
+    software: ['Maya'],
+    summary: { en: 'Complete creature rig: a custom rig with a joint-based deformation system, additive blendshapes with pose interpolation, and arm joint deformation based on Kiel Figgins setups. Shown animated and composited into live-action footage.',
+      ja: 'クリーチャーの完全なリグ。ジョイントベースの変形システムを持つカスタムリグ、ポーズ補間付きの加算ブレンドシェイプ、Kiel Figgins のセットアップを参考にした腕のジョイント変形。アニメーションと実写映像への合成で紹介。' },
+    media: [
+      { label: { en: 'Rigging and animation reel', ja: 'リギング・アニメーションリール' }, src: 'media/creature-rig/creature-rig-reel.mp4' },
+      { label: { en: 'Controls, front and side', ja: 'コントローラー（正面・側面）' }, src: 'media/creature-rig/front-side.jpg' }] },
   { id: 'fighting', cat: 'animation', year: '', thumb: 'media/fighting/thumb.jpg',
     title: { en: 'Fighting', ja: 'ファイティング' },
     kind: { en: 'Body mechanics exercise', ja: 'ボディメカニクス練習' },
@@ -695,16 +706,6 @@ const ALL_PROJECTS = [
     media: [
       { label: { en: 'Animation', ja: 'アニメーション' }, src: 'media/fighting/fighting.mp4' },
       { label: { en: 'Reference', ja: 'リファレンス' }, src: 'media/fighting/fighting-reference.mp4' }] },
-  { id: 'creature-rig', cat: 'rigs', year: '2025', thumb: '',
-    title: { en: 'Creature rig', ja: 'クリーチャーリグ' },
-    kind: { en: "Master's project", ja: '修士制作' },
-    role: { en: 'Rigging', ja: 'リギング' },
-    software: ['[SOFTWARE]'],
-    summary: { en: '[One paragraph: the creature, what the rig had to do, what you built.]', ja: '［概要：どんなクリーチャーか、リグに求められたこと、作ったもの］' },
-    media: [
-      { label: { en: 'Turntable', ja: 'ターンテーブル' }, src: '' },
-      { label: { en: 'Control demo', ja: 'コントローラーのデモ' }, src: '' },
-      { label: { en: 'Deformation test', ja: 'デフォメーションテスト' }, src: '' }] },
   { id: 'ue5-converter', cat: 'tools', year: '2025–26', thumb: '',
     title: { en: 'Maya to UE5 Control Rig converter', ja: 'Maya → UE5 Control Rig 変換ツール' },
     kind: { en: 'Research tool', ja: '研究ツール' },
