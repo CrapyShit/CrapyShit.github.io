@@ -45,7 +45,7 @@ precision mediump float; out vec4 o; void main() { o = vec4(0); }`;
 /* every edge as a screen-space quad; kind (aK.z): 0 plain, 1 crease, 2 intersection, 3 intersection on the face (eyes) */
 const LINE_VS = `#version 300 es
 in vec3 aA; in vec3 aB; in vec3 aN1; in vec3 aN2; in vec4 aK;` + INST + `
-uniform float uW, uMode; uniform vec3 uInk, uAcc; uniform vec3 uMat[6];
+uniform float uW, uMode, uEps; uniform vec3 uInk, uAcc; uniform vec3 uMat[6];
 out vec4 vC;
 void main() {
   vec3 wa = world(aA), wb = world(aB);
@@ -53,13 +53,16 @@ void main() {
   bool always = aK.z > 1.5, face = aK.z > 2.5;
   bool f1 = dot(n1, v) > 0.0, f2 = dot(n2, v) > 0.0, sil = !always && f1 != f2, cr = !always && aK.z > .5 && (f1 || f2);
   if (!(sil || cr || always)) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vC = vec4(0); return; }
+  /* lift the line off its surface by a fixed distance toward the camera, in world units, so it wins against its own
+     faces but not against anything really in front of it, whatever the camera's near plane */
+  wa += normalize(uCam - wa) * uEps; wb += normalize(uCam - wb) * uEps;
   vec4 ca = snap(uVP * vec4(wa, 1.0)), cb = snap(uVP * vec4(wb, 1.0));
   vec2 sa = ca.xy / ca.w * uRes * .5, sb = cb.xy / cb.w * uRes * .5, d = sb - sa;
   float l = length(d); d = l > 1e-4 ? d / l : vec2(1, 0);
   vec2 nr = vec2(-d.y, d.x);
   vec4 c = mix(ca, cb, aK.x);
   vec2 s = mix(sa, sb, aK.x) + nr * aK.y * uW * .5 + d * (aK.x * 2.0 - 1.0) * uW * .5;
-  gl_Position = vec4(s / (uRes * .5) * c.w, c.z - .0006 * c.w, c.w);
+  gl_Position = vec4(s / (uRes * .5) * c.w, c.z, c.w);
   int m = int(aK.w + .5);
   vec3 col = uMode < .5 ? uInk : uMode < 1.5 ? uAcc : uMode < 2.5 ? ((cr && !sil) || face ? uAcc : uInk) : uMat[m];
   float far = clamp((uCam.z - 15.0 - iPos.z) / 9.0, 0.0, 1.0);
@@ -216,7 +219,7 @@ M.create = function (cv, url) {
           gl.bindVertexArray(VF); gl.drawElementsInstanced(gl.TRIANGLES, tri.length, gl.UNSIGNED_SHORT, 0, n);
           gl.disable(gl.POLYGON_OFFSET_FILL); gl.colorMask(true, true, true, true);
           gl.useProgram(LINE.p);
-          gl.uniform1f(LINE.u.uW, (o.line || 1.4) * dpr); gl.uniform1f(LINE.u.uMode, o.mode == null ? 2 : o.mode);
+          gl.uniform1f(LINE.u.uW, (o.line || 1.4) * dpr); gl.uniform1f(LINE.u.uEps, o.eps || .012); gl.uniform1f(LINE.u.uMode, o.mode == null ? 2 : o.mode);
           gl.uniform3fv(LINE.u.uInk, C.ink); gl.uniform3fv(LINE.u.uAcc, C.acc);
           gl.uniform3fv(LINE.u.uMat, new Float32Array(M.MAT.map((c, i) => (i === 5 ? C.ink : c)).flat()));
           gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
