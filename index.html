@@ -673,7 +673,7 @@ const SITE = {
     controls: { dark: 'media/stage/oni_dark_controls.webm', light: 'media/stage/oni_light_controls.webm' },
     reel: 'https://youtu.be/6N0kjsM0SSk' },   // reel: a YouTube link or a video file
   intro: 'always', // the intro behind the home page: 'always' plays on every load, 'once' once per browser, 'off' never
-  intros: ['origin', 'vault'],   // intros to pick from at random on each load (never the same one twice in a row)
+  intros: ['origin', 'vault', 'rig'],   // intros to pick from at random on each load (never the same one twice in a row)
   cast: 'Proto',   // the character the origin assembles: shown on the rack label and in the last caption
   cv: '',          // path to your CV PDF
   emptyTiles: 0    // the Work page pads its grid with empty slots up to this many tiles; set to 0 once it is full
@@ -739,6 +739,7 @@ const T = {
     'lore.k': 'Origin', 'lore.1': 'Uncharted system', 'lore.2': 'A moon that built itself', 'lore.3': 'The data center',
     'lore.4': 'Digitising', 'lore.5': '{cast} online', 'lore.skip': 'Skip', 'lore.replay': 'Replay intro',
     'vault.1': 'Archive', 'vault.2': 'Searching', 'vault.3': 'Match', 'vault.4': 'Release', 'vault.5': '{cast} online',
+    'rig.1': 'Skeleton', 'rig.2': 'Hierarchy', 'rig.3': 'Controls', 'rig.4': 'Skinning', 'rig.5': '{cast} online',
     'side.slot': 'Detail loop slot, 1:1', 'side.works': 'Works in',
     'inside.lede': 'Scroll to take the character apart, in the order a rig is built.',
     's1': 'Shaded', 's2': 'Wireframe', 's3': 'Skeleton', 's4': 'Controls',
@@ -774,6 +775,7 @@ const T = {
     'lore.k': '起源', 'lore.1': '未登録の星系', 'lore.2': '自らを造った月', 'lore.3': 'データセンター',
     'lore.4': 'デジタル化', 'lore.5': '{cast} 起動', 'lore.skip': 'スキップ', 'lore.replay': 'イントロをもう一度再生',
     'vault.1': 'アーカイブ', 'vault.2': '検索中', 'vault.3': '一致', 'vault.4': '解放', 'vault.5': '{cast} 起動',
+    'rig.1': 'スケルトン', 'rig.2': '階層', 'rig.3': 'コントローラー', 'rig.4': 'スキニング', 'rig.5': '{cast} 起動',
     'side.slot': 'ディテールループ枠 1:1', 'side.works': '使用ツール',
     'inside.lede': 'スクロールすると、リグを組む順番でキャラクターが分解されていきます。',
     's1': 'シェーディング', 's2': 'ワイヤーフレーム', 's3': 'スケルトン', 's4': 'コントローラー',
@@ -1812,6 +1814,144 @@ const lore = (() => {
     g.strokeStyle = C.glB; g.strokeRect(cx - r + 10 * (1 - u), cy - r, r * 2, r * 2);
   }
 
+  function fadeWorld(G, tw, wa) {                                           // the digital floor, faded in through an off-screen canvas
+    if (wa <= 0) return;
+    if (wa >= 1) { world(G, tw, 1); return; }
+    const main = g; g = og; g.setTransform(cd, 0, 0, cd, 0, 0); g.clearRect(0, 0, cw, ch); world(G, tw, wa); g = main;
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = wa; g.drawImage(oc, 0, 0); g.restore();
+  }
+
+  /* ===== intro 3: the rig build =====
+     Fixed on the stage camera. The skeleton is built in hierarchy order while an outliner types itself out beside it,
+     Maya-coloured controls draw on (yellow centre, blue left, red right), a weight-paint heat map bleeds out
+     from every bone, and the figure fades in over it. The rig turns with the figure so they line up. */
+  const R_END = 9, RBEAT = [0, 1.2, 3.2, 5.5, 7];
+  const RJ = [], RKID = {};
+  BN.forEach(([a, b]) => (RKID[a] = RKID[a] || []).push(b));
+  (function walk(n, d, par) { RJ.push({ n, d, par, code: 'J' + String(RJ.length).padStart(2, '0'), t0: .3 + RJ.length * .12 }); (RKID[n] || []).forEach(c => walk(c, d + 1, n)); })('hip', 0, null);
+  const RJI = {}; RJ.forEach(j => (RJI[j.n] = j));
+  const YEL = '#E8C200', BLU = '#2F6BFF', RED = '#E5402E', HEAT = ['#2F5BFF', '#22C77A', '#FFD23F', '#FF4B3A'];
+  const RC = [{ k: 'root', at: [0, .005, 0], r: .58, c: YEL, t0: 3.2 }, { k: 'ring', j: 'hip', r: .33, c: YEL, t0: 3.35, n: [0, 1, .15] },
+    { k: 'ring', j: 'sp1', r: .24, c: YEL, t0: 3.5 }, { k: 'ring', j: 'sp2', r: .25, c: YEL, t0: 3.6 }, { k: 'ring', j: 'chest', r: .28, c: YEL, t0: 3.7 },
+    { k: 'ring', j: 'neck', r: .13, c: YEL, t0: 3.82 }, { k: 'ring', j: 'head', r: .2, c: YEL, t0: 3.94, off: [0, .07, 0] }];
+  [['L', BLU, 0], ['R', RED, .06]].forEach(([s, c, dt]) => {
+    const m = s === 'L' ? 1 : -1;
+    RC.push({ k: 'ring', j: 'sh' + s, r: .1, c, t0: 4.1 + dt, along: 'el' + s }, { k: 'ring', j: 'el' + s, r: .085, c, t0: 4.2 + dt, along: 'wr' + s },
+      { k: 'box', j: 'wr' + s, r: .075, c, t0: 4.32 + dt }, { k: 'pole', j: 'el' + s, off: [0, 0, -.42], c, t0: 4.44 + dt },
+      { k: 'plus', j: 'ha' + s, off: [m * .13, .08, 0], c, t0: 4.56 + dt }, { k: 'ring', j: 'leg' + s, r: .12, c, t0: 4.66 + dt, along: 'kn' + s },
+      { k: 'foot', j: 'an' + s, c, t0: 4.78 + dt }, { k: 'pole', j: 'kn' + s, off: [0, 0, .5], c, t0: 4.9 + dt });
+  });
+  let figOp = 1;                                                          // the figure's opacity, for intros that fade it in
+  function rig(G, t) {
+    const S = G.S, th = G.th, W3 = p => ry(p, th);
+    const pj = p => { const e = W3(p), yy = e[1] - .9436; return [G.ox + e[0] * S, G.cy - (yy * CP - e[2] * SP) * S, yy * SP + e[2] * CP]; };
+    const pjF = p => { const yy = p[1] - .9436; return [G.ox + p[0] * S, G.cy - (yy * CP - p[2] * SP) * S]; };   // unrotated, for the floor grid
+    const wa = st(7.2, 9, t), rigA = 1 - st(7.15, 7.85, t), heatA = 1 - st(7.05, 7.7, t), panA = 1 - st(7.1, 7.8, t);
+    fadeWorld(G, t + 14, wa);
+    if (rigA <= 0) return { rev: 1 };
+
+    /* a viewport grid under it, with the two centre lines stronger */
+    const ga = rigA * st(0, .5, t) * (1 - wa);
+    if (ga > 0) {
+      g.lineWidth = 1;
+      for (let k = -8; k <= 8; k++) {
+        const v = k * .25, a = k ? .3 : .75;
+        g.globalAlpha = ga * a; g.strokeStyle = k ? C.line : C.ink2;
+        seg(pjF([v, 0, -2]), pjF([v, 0, 2])); seg(pjF([-2, 0, v]), pjF([2, 0, v]));
+      }
+    }
+
+    /* weight paint: every bone's influence bleeding out from it, cold to hot */
+    if (t > 5.4 && heatA > 0) {
+      g.lineCap = 'round';
+      HEAT.forEach((col, layer) => {
+        g.strokeStyle = col;
+        BN.forEach(([a, b, r]) => {
+          const k = eo((t - 5.45 - RJI[a].d * .13) / .6);
+          if (k <= 0) return;
+          g.globalAlpha = heatA * (.42 + layer * .06); g.lineWidth = Math.max(1, r * 2 * S * [2.3, 1.7, 1.15, .55][layer] * k);
+          seg(pj(JN[a]), pj(JN[b]));
+        });
+      });
+      g.lineCap = 'butt';
+    }
+
+    /* the skeleton, joint by joint */
+    const newest = RJ.reduce((m, j) => (t >= j.t0 ? j : m), null);
+    RJ.forEach(j => {
+      const k = eb(st(j.t0, j.t0 + .22, t));
+      if (k <= 0) return;
+      const c = pj(JN[j.n]), rj = Math.max(3, .024 * S) * k, sel = j === newest && t < 3.6, col = sel ? C.acc : C.ink;
+      if (j.par) {                                                          // the bone: a long wedge from the parent to this joint
+        const p = pj(JN[j.par]), q = [mix(p[0], c[0], k), mix(p[1], c[1], k)], dx = q[0] - p[0], dy = q[1] - p[1], l = Math.hypot(dx, dy) || 1, w = Math.max(2.5, .022 * S), nx = -dy / l * w, ny = dx / l * w;
+        const b = [p[0] + dx * .12, p[1] + dy * .12];
+        g.globalAlpha = rigA * .9; g.fillStyle = C.panel; g.strokeStyle = sel ? C.acc : C.ink2; g.lineWidth = 1;
+        poly([p, [b[0] + nx, b[1] + ny], q, [b[0] - nx, b[1] - ny]]); g.fill(); g.stroke();
+      }
+      g.globalAlpha = rigA; g.strokeStyle = col; g.lineWidth = sel ? 1.6 : 1.2; g.fillStyle = C.ground;
+      oval(c, rj, rj); g.fill(); g.stroke(); oval(c, rj, rj * .35); g.stroke(); oval(c, rj * .35, rj); g.stroke();
+    });
+
+    /* controls, each drawing itself on */
+    RC.forEach(o => {
+      const d = st(o.t0, o.t0 + .4, t);
+      if (d <= 0) return;
+      const base = o.j ? add(JN[o.j], o.off || [0, 0, 0]) : o.at;
+      g.globalAlpha = rigA; g.strokeStyle = o.c; g.lineWidth = 2; g.lineJoin = 'round';
+      const ringPts = (c, n, r, N = 40) => { n = unit(n); const a = Math.abs(n[1]) < .9 ? [0, 1, 0] : [1, 0, 0], u = unit(cross(n, a)), v = cross(n, u), out = [];
+        for (let i = 0; i <= N; i++) { const w = i / N * TAU; out.push(pj(add(c, add(mul(u, Math.cos(w) * r), mul(v, Math.sin(w) * r))))); } return out; };
+      const draw = (pts, close) => { const n = Math.max(2, Math.ceil(pts.length * d)); g.beginPath(); pts.slice(0, n).forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); if (close && d >= 1) g.closePath(); g.stroke(); };
+      if (o.k === 'ring') draw(ringPts(base, o.along ? sub(JN[o.along], JN[o.j]) : (o.n || [0, 1, 0]), o.r));
+      else if (o.k === 'root') {
+        draw(ringPts(base, [0, 1, 0], o.r, 64));
+        if (d >= 1) [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([x, z]) => {           // four arrows on the floor
+          const tip = [x * (o.r + .16), .005, z * (o.r + .16)], b1 = [x * o.r + z * .07, .005, z * o.r + x * .07], b2 = [x * o.r - z * .07, .005, z * o.r - x * .07];
+          poly([pj(tip), pj(b1), pj(b2)]); g.stroke();
+        });
+      } else if (o.k === 'box' || o.k === 'foot') {
+        const [hx, hy, hz] = o.k === 'box' ? [o.r, o.r, o.r] : [.085, .035, .17], c = o.k === 'foot' ? [base[0], .035, base[2] + .07] : base;
+        const v = (i, j, k) => pj([c[0] + i * hx, c[1] + j * hy, c[2] + k * hz]), E = [[[-1, -1, -1], [1, -1, -1]], [[1, -1, -1], [1, 1, -1]], [[1, 1, -1], [-1, 1, -1]], [[-1, 1, -1], [-1, -1, -1]],
+          [[-1, -1, 1], [1, -1, 1]], [[1, -1, 1], [1, 1, 1]], [[1, 1, 1], [-1, 1, 1]], [[-1, 1, 1], [-1, -1, 1]], [[-1, -1, -1], [-1, -1, 1]], [[1, -1, -1], [1, -1, 1]], [[1, 1, -1], [1, 1, 1]], [[-1, 1, -1], [-1, 1, 1]]];
+        g.beginPath(); E.slice(0, Math.ceil(E.length * d)).forEach(([a, b]) => { const p = v(...a), q = v(...b); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }); g.stroke();
+      } else if (o.k === 'pole') {                                          // a small diamond with a dashed line back to its joint
+        const c = pj(base), s2 = Math.max(4, .045 * S) * eb(d), j = pj(JN[o.j]);
+        poly([[c[0], c[1] - s2], [c[0] + s2, c[1]], [c[0], c[1] + s2], [c[0] - s2, c[1]]]); g.stroke();
+        g.setLineDash([3, 4]); g.lineWidth = 1; g.globalAlpha = rigA * .7 * d; seg(j, [mix(j[0], c[0], d), mix(j[1], c[1], d)]); g.setLineDash([]);
+      } else if (o.k === 'plus') {                                          // the IK/FK switch
+        const c = pj(base), s2 = Math.max(4, .04 * S) * eb(d);
+        g.beginPath(); g.moveTo(c[0] - s2, c[1]); g.lineTo(c[0] + s2, c[1]); g.moveTo(c[0], c[1] - s2); g.lineTo(c[0], c[1] + s2); g.stroke();
+        g.lineWidth = 1; g.strokeRect(c[0] - s2 * 1.6, c[1] - s2 * 1.6, s2 * 3.2, s2 * 3.2);
+      }
+    });
+
+    /* the outliner, typing itself out beside the figure */
+    const pa = panA * st(.1, .4, t);
+    if (pa > 0 && G.B > 230 && W >= 560) {
+      const RH = 13, sk = skip.getBoundingClientRect(), top = Math.max(pj([0, 1.9, 0])[1] - 6, sk.bottom - cv.getBoundingClientRect().top + 10), bottom = pjF([0, 0, 0])[1], x1 = G.ox - .72 * S - 30, x0 = x1 - 128;
+      const shown = RJ.filter(j => t >= j.t0), fit = Math.max(4, Math.floor((bottom - top - 24) / RH)), rows = shown.slice(Math.max(0, shown.length - fit));
+      g.globalAlpha = pa * .92; g.fillStyle = C.ground; g.fillRect(x0, top, x1 - x0, 22 + rows.length * RH + 6);
+      g.globalAlpha = pa; g.strokeStyle = C.ink2; g.lineWidth = 1; g.strokeRect(x0 + .5, top + .5, x1 - x0 - 1, 22 + rows.length * RH + 5);
+      text('OUTLINER', x0 + 8, top + 11, C.ink, pa, 'left', 10); text(String(shown.length).padStart(2, '0'), x1 - 8, top + 11, C.ink2, pa, 'right', 10);
+      rows.forEach((j, i) => {
+        const y = top + 26 + i * RH + RH / 2, x = x0 + 10 + j.d * 7, age = t - j.t0, sel = j === newest && t < 3.6;
+        if (sel) { g.globalAlpha = pa * .22; g.fillStyle = C.acc; g.fillRect(x0 + 2, y - RH / 2, x1 - x0 - 4, RH); }
+        g.globalAlpha = pa * .5; g.strokeStyle = C.ink2; if (j.d) seg([x - 6, y], [x - 2, y]);
+        g.globalAlpha = pa; g.strokeStyle = sel ? C.acc : C.ink; oval([x + 2, y], 2.6, 2.6); g.stroke();
+        let s2 = j.code; if (age < .18) s2 = s2.slice(0, 1 + (age / .06 | 0));
+        text(s2, x + 9, y, sel ? C.acc : C.ink, pa, 'left', 10);
+        if (age < .5) {                                                     // a leader to the joint just made
+          const c = pj(JN[j.n]);
+          g.globalAlpha = pa * (1 - age / .5) * .8; g.strokeStyle = C.acc; g.setLineDash([2, 3]); seg([x1, y], c); g.setLineDash([]);
+        }
+      });
+    }
+
+    /* the figure fades in over the heat map */
+    if (t < 7) return { rev: 0 };
+    figOp = st(6.95, 7.6, t) * (t < 7.2 && (t * 22 | 0) % 2 ? .35 : 1);
+    return { rev: 1 };
+  }
+
   /* ===== intro 2: the vault =====
      A long aisle of dormant capsules. The camera glides down it with a real lens (focal 3.2) until it stops 3.2 units
      from the capsule at the end, which has woken. The aisle goes dark, the lens pulls out to the stage's flat camera
@@ -1837,10 +1977,7 @@ const lore = (() => {
     const cam = vaultCam(G, t), pj = cam.pj, gone = 1 - st(7.3, 8.7, t), side = 1 - st(4.5, 5.25, t), lit = st(2.7, 3, t) * (t < 3 && (t * 18 | 0) % 2 ? .4 : 1);
     const fog = dv => cl(1.35 - (cam.din - dv) / 32);
     const wa = st(7.2, 9, t);                                              // the digital floor taking over
-    if (wa > 0) {
-      if (wa < 1) { const main = g; g = og; g.setTransform(cd, 0, 0, cd, 0, 0); g.clearRect(0, 0, cw, ch); world(G, t + 14, wa); g = main; g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = wa; g.drawImage(oc, 0, 0); g.restore(); }
-      else world(G, t + 14, 1);
-    }
+    fadeWorld(G, t + 14, wa);
     if (gone <= 0) return 1;
     const A = gone * st(-.3, .25, t);
 
@@ -1944,15 +2081,15 @@ const lore = (() => {
   }
 
   /* ----- placing, timing, drawing ----- */
-  const RUN = { origin: 1, vault: 1 }, LIST = (SITE.intros || ['origin']).filter(n => RUN[n]);
+  const RUN = { origin: 1, vault: 1, rig: 1 }, LIST = (SITE.intros || ['origin']).filter(n => RUN[n]);
   if (!LIST.length) LIST.push('origin');
   function pick() {                                                       // a random intro, never the one shown last time
     const prev = store.get('intro-last'), pool = LIST.length > 1 ? LIST.filter(n => n !== prev) : LIST, m = pool[Math.random() * pool.length | 0];
     store.set('intro-last', m); return m;
   }
   let mode = pick();
-  const endT = () => (mode === 'vault' ? V_END : END_T);
-  const clock_t = () => (mode === 'vault' ? clock : story(clock));
+  const endT = () => (mode === 'vault' ? V_END : mode === 'rig' ? R_END : END_T);
+  const clock_t = () => (mode === 'origin' ? story(clock) : clock);
   let cw = 0, ch = 0, cd = 1, clock = -.35, last = 0, rafL = 0, done = false, beat = -1, lastY = -1, odd = false;
   function fit() {
     const bg = wide.matches;
@@ -1970,7 +2107,7 @@ const lore = (() => {
     return { S, ox, oy, y0, cy: oy - .9436 * CP * S, th: fr / 240 * TAU - .55, B: S * 1.2, A: [ox, cl(seen, oy - 1.5 * CP * S, oy - .95 * CP * S)] };
   }
   function caption(t) {
-    const B = mode === 'vault' ? VBEAT : BEAT;
+    const B = mode === 'vault' ? VBEAT : mode === 'rig' ? RBEAT : BEAT;
     let i = 0; while (i < 4 && t >= B[i + 1]) i++;
     if (done) i = 5;
     if (i === beat) return;
@@ -1978,7 +2115,7 @@ const lore = (() => {
     stage.toggleAttribute('data-lore', !done);                             // while it plays, its caption takes the viewport read-out's place
     capEl.hidden = done || still.matches; again.hidden = !done || still.matches;
     if (done) return;
-    num.textContent = '0' + (i + 1); ttl.dataset.i18n = (mode === 'vault' ? 'vault.' : 'lore.') + (i + 1);
+    num.textContent = '0' + (i + 1); ttl.dataset.i18n = (mode === 'origin' ? 'lore.' : mode + '.') + (i + 1);
     if (ttl._sc) ttl._txt = tr(ttl.dataset.i18n); else ttl.textContent = tr(ttl.dataset.i18n);
     scramble(ttl);
   }
@@ -2016,8 +2153,11 @@ const lore = (() => {
     g.setTransform(cd, 0, 0, cd, 0, 0); g.clearRect(0, 0, cw, ch); g.lineCap = 'butt'; g.lineJoin = 'miter'; g.setLineDash([]);
     const floorY = reveal.getBoundingClientRect().bottom - cv.getBoundingClientRect().top;   // nothing is drawn below the reveal row, so the credits stay clean
     g.save(); g.beginPath(); g.rect(0, 0, cw, Math.min(ch, floorY)); g.clip();
-    const rev = done ? (mode === 'vault' ? (vault(G, Math.max(t, V_END)), 1) : origin(G, t)) : mode === 'vault' ? vault(G, t) : origin(G, t);
+    figOp = 1;
+    const tt = done && mode !== 'origin' ? Math.max(t, endT()) : t;
+    const rev = mode === 'vault' ? (done ? (vault(G, tt), 1) : vault(G, tt)) : mode === 'rig' ? (rig(G, tt).rev) : origin(G, t);
     g.restore(); g.globalAlpha = 1;
+    fig.style.opacity = figOp < 1 ? figOp.toFixed(3) : '';
     fig.style.clipPath = rev >= 1 ? '' : 'inset(0 0 ' + ((1 - rev) * 100).toFixed(2) + '% 0)';
     bar.hidden = !(rev > 0 && rev < 1); bar.style.top = (rev * 100).toFixed(2) + '%';
     caption(t);
