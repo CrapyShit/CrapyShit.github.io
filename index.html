@@ -683,6 +683,15 @@ const SITE = {
 const CATS = ['rigs', 'animation', 'tools'];
 
 const ALL_PROJECTS = [
+  { id: 'proto', cat: 'rigs', year: '2026.10.30', time: { en: '1 week', ja: '1週間' }, thumb: 'media/proto/thumb.jpg',
+    title: { en: 'Proto', ja: 'Proto' },
+    kind: { en: 'Fast rig workflow test', ja: 'スピードリグのワークフローテスト' },
+    role: { en: 'Rigging', ja: 'リギング' },
+    software: ['Maya', 'Python'],
+    summary: { en: 'A test of a new workflow: how fast can a full character go from model to animatable? Built in one week with AI-assisted Python tools I created for Maya, so it is a working prototype rather than a polished final rig. Body: IK/FK spine with stretch and volume, IK/FK arms and legs with soft IK, stretch and pinning, bendy arm ribbons, reverse foot, and finger IK with automatic metacarpals. Face: jaw, lip ribbon, eye aim with following eyelids, tongue, and ribbons pinned to the mesh. Fully matrix-based with no constraints, skinned in layers with ngSkinTools 2.',
+      ja: '新しいワークフローのテスト：モデルからアニメーション可能なリグまで、どれだけ速く仕上げられるか。AIの補助を受けて自作したMaya用Pythonツールで1週間で制作したため、完成版ではなく動作するプロトタイプです。ボディ：ストレッチとボリューム保持付きのIK/FKスパイン、ソフトIK・ストレッチ・ピン留め付きのIK/FK腕と脚、腕のベンディリボン、リバースフット、中手骨が自動で動くフィンガーIK。フェイシャル：顎、唇のリボン、まぶたが追従するアイエイム、舌、メッシュに貼り付くリボン。コンストレイントを使わない完全マトリクスベースのリグで、スキニングはngSkinTools 2のレイヤーで実施。' },
+    media: [
+      { label: { en: 'Rig reel', ja: 'リグリール' }, src: 'media/proto/proto-reel.mp4' }] },
   { id: 'creature-rig', cat: 'rigs', year: '2024.12.01', time: { en: '~1 month', ja: '約1か月' }, thumb: 'media/creature-rig/thumb.jpg',
     title: { en: 'Creature Rigging Master Project', ja: 'クリーチャーリギング 修士制作' },
     kind: { en: "Master's project", ja: '修士制作' },
