@@ -694,7 +694,8 @@ const ALL_PROJECTS = [
     summary: { en: 'A test of a new workflow: how fast can a full character go from model to animatable? Built in one week with AI-assisted Python tools I created for Maya, so it is a working prototype rather than a polished final rig. Body: IK/FK spine with stretch and volume, IK/FK arms and legs with soft IK, stretch and pinning, bendy arm ribbons, reverse foot, and finger IK with automatic metacarpals. Face: jaw, lip ribbon, eye aim with following eyelids, tongue, and ribbons pinned to the mesh. Fully matrix-based with no constraints, skinned in layers with ngSkinTools 2.',
       ja: '新しいワークフローのテスト：モデルからアニメーション可能なリグまで、どれだけ速く仕上げられるか。AIの補助を受けて自作したMaya用Pythonツールで1週間で制作したため、完成版ではなく動作するプロトタイプです。ボディ：ストレッチとボリューム保持付きのIK/FKスパイン、ソフトIK・ストレッチ・ピン留め付きのIK/FK腕と脚、腕のベンディリボン、リバースフット、中手骨が自動で動くフィンガーIK。フェイシャル：顎、唇のリボン、まぶたが追従するアイエイム、舌、メッシュに貼り付くリボン。コンストレイントを使わない完全マトリクスベースのリグで、スキニングはngSkinTools 2のレイヤーで実施。' },
     media: [
-      { label: { en: 'Rig reel', ja: 'リグリール' }, src: 'media/proto/proto-reel.mp4' }] },
+      { label: { en: 'Rig reel', ja: 'リグリール' }, src: 'media/proto/proto-reel.mp4' },
+      { label: { en: 'Shaded loop (home page)', ja: 'シェーディングループ（ホーム）' }, src: SITE.media.shaded }] },
   { id: 'creature-rig', cat: 'rigs', year: '2024.12.01', time: { en: '~1 month', ja: '約1か月' }, thumb: 'media/creature-rig/thumb.jpg',
     title: { en: 'Creature Rigging Master Project', ja: 'クリーチャーリギング 修士制作' },
     kind: { en: "Master's project", ja: '修士制作' },
@@ -984,8 +985,10 @@ let filter = 'all';
 /* A media frame: the file if there is one, otherwise a patterned slot that says what goes there. */
 function frame(src, shape, quiet, alt) {
   if (!src) { const d = mk('div', 'slot slot--' + shape); d.append(mk('span', 'slot-t', { sq: '1:1', wide: '16:9', clip: '16:10' }[shape] + ' [' + tr('slot.todo') + ']')); return d; }
-  const video = /\.(mp4|webm|mov)$/i.test(src), n = mk(video ? 'video' : 'img', 'fill fill--' + shape);
-  n.src = src;
+  const themed = typeof src === 'object';                                  // { dark, light }: follows the theme, like the home stage
+  const video = /\.(mp4|webm|mov)$/i.test(themed ? src.dark || src.light : src), n = mk(video ? 'video' : 'img', 'fill fill--' + shape);
+  n.src = srcFor(src);
+  if (themed) n._themed = src;
   if (video) { n.muted = true; n.loop = true; n.playsInline = true; n.autoplay = true; if (!quiet) n.controls = true; } else n.alt = alt || '';
   return n;
 }
@@ -2188,7 +2191,10 @@ if (th0 === 'dark' || th0 === 'light') root.dataset.theme = th0;
 setAccent(ACCENTS[accentI]);
 setLang(store.get('lang') || ((navigator.language || '').toLowerCase().startsWith('ja') ? 'ja' : 'en'));
 readColours();
-const repaint = () => { readColours(); kick(); };
+const repaint = () => {
+  readColours(); kick();
+  $$('.fill').forEach(n => { if (n._themed) { const s = srcFor(n._themed); if (!n.src.endsWith(s)) n.src = s; } });   // theme-following media
+};
 new MutationObserver(repaint).observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-accent', 'class', 'style'] });
 darkMq.addEventListener('change', repaint);
 new ResizeObserver(() => { resize(); kick(); }).observe(reveal);
