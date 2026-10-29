@@ -2068,7 +2068,7 @@ const lore = (() => {
 
     const burst = .9 * st(4.25, 4.35, t) * (1 - st(4.45, 4.8, t)) + .35 * st(1.55, 1.6, t) * (1 - st(1.6, 1.8, t)) + .35 * st(2.7, 2.75, t) * (1 - st(2.75, 2.95, t)) + .55 * st(7.1, 7.55, t);
     const col = { ink: FGL.rgb(C.ink), acc: FGL.rgb(C.acc), glA: FGL.rgb(C.glA), glB: FGL.rgb(C.glB) };
-    if (items.length) { FG.frame({ items, w: cw, h: ch, dpr: Math.min(1.5, cd), cam: { z: B_CAMZ, near: .2, far: 40 }, colours: col, mode: 2, line: 1.4,
+    if (items.length) { FG.frame({ items, w: cw, h: ch, dpr: Math.min(1.5, cd), cam: { z: B_CAMZ }, colours: col, mode: 2, line: 1.4,
       amb: still.matches ? 0 : .22, burst: still.matches ? 0 : Math.min(1, burst), time: t, clipBottom: floorY }); glUsed = true; }
     else if (glUsed) { FG.clear(); glUsed = false; }
     return thru ? cl((t - 7.9) / .9) : 0;

@@ -45,7 +45,7 @@ precision mediump float; out vec4 o; void main() { o = vec4(0); }`;
 /* every edge as a screen-space quad; kind (aK.z): 0 plain, 1 crease, 2 intersection, 3 intersection on the face (eyes) */
 const LINE_VS = `#version 300 es
 in vec3 aA; in vec3 aB; in vec3 aN1; in vec3 aN2; in vec4 aK;` + INST + `
-uniform float uW, uMode, uEps; uniform vec3 uInk, uAcc; uniform vec3 uMat[6];
+uniform float uW, uMode, uEps, uPx; uniform vec3 uInk, uAcc; uniform vec3 uMat[6];
 out vec4 vC;
 void main() {
   vec3 wa = world(aA), wb = world(aB);
@@ -55,7 +55,9 @@ void main() {
   if (!(sil || cr || always)) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vC = vec4(0); return; }
   /* lift the line off its surface by a fixed distance toward the camera, in world units, so it wins against its own
      faces but not against anything really in front of it, whatever the camera's near plane */
-  wa += normalize(uCam - wa) * uEps; wb += normalize(uCam - wb) * uEps;
+  /* the lift grows with the size of a pixel at that distance, so far flowers behave like near ones */
+  float da = length(uCam - wa), db = length(uCam - wb);
+  wa += (uCam - wa) / da * (uEps + 1.5 * uPx * da); wb += (uCam - wb) / db * (uEps + 1.5 * uPx * db);
   vec4 ca = snap(uVP * vec4(wa, 1.0)), cb = snap(uVP * vec4(wb, 1.0));
   vec2 sa = ca.xy / ca.w * uRes * .5, sb = cb.xy / cb.w * uRes * .5, d = sb - sa;
   float l = length(d); d = l > 1e-4 ? d / l : vec2(1, 0);
@@ -185,8 +187,13 @@ M.create = function (cv, url) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
     let vp = new Float32Array(16), cssW = 1, cssH = 1;
-    function camera(c) {
-      const t = Math.tan((c.fov || 32) * Math.PI / 360), f = 1 / t, n = c.near || 4, fr = c.far || 40, m = new Float32Array(16);
+    /* near and far follow what is on screen each frame, so the depth buffer's precision is spent on the flowers:
+       a near plane much closer than the nearest flower leaves too little for the far ones on some GPUs */
+    function camera(c, items) {
+      let lo = Infinity, hi = 0;
+      items.forEach(d => { const dist = c.z - d.p[2], r = R * d.s * 1.15; lo = Math.min(lo, dist - r); hi = Math.max(hi, dist + r); });
+      const t = Math.tan((c.fov || 32) * Math.PI / 360), f = 1 / t, m = new Float32Array(16);
+      const n = items.length ? Math.min(Math.max(.1, lo * .9), 50) : 4, fr = items.length ? Math.max(n + 1, hi * 1.05 + .5) : 40;
       m[0] = f / (W / H); m[5] = f; m[10] = (fr + n) / (n - fr); m[11] = -1; m[14] = m[10] * -c.z + 2 * fr * n / (n - fr); m[15] = c.z;
       return m;
     }
@@ -204,8 +211,8 @@ M.create = function (cv, url) {
       frame(o) {
         const dpr = o.dpr || 1, w = Math.max(1, Math.round(o.w * dpr)), h = Math.max(1, Math.round(o.h * dpr));
         size(w, h); cssW = o.w; cssH = o.h;
-        vp = camera(o.cam);
         const items = o.items.slice(0, MAXN), n = items.length;
+        vp = camera(o.cam, items);
         items.forEach((d, i) => inst.set([d.p[0], d.p[1], d.p[2], d.q[0], d.q[1], d.q[2], d.q[3], d.s, (d.snap || 0) * dpr, d.alpha == null ? 1 : d.alpha, (d.jit || 0) * dpr, 0], i * 12));
         gl.bindBuffer(gl.ARRAY_BUFFER, instBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, inst, 0, n * 12);
         const C = o.colours, cam = [0, 0, o.cam.z];
@@ -219,7 +226,7 @@ M.create = function (cv, url) {
           gl.bindVertexArray(VF); gl.drawElementsInstanced(gl.TRIANGLES, tri.length, gl.UNSIGNED_SHORT, 0, n);
           gl.disable(gl.POLYGON_OFFSET_FILL); gl.colorMask(true, true, true, true);
           gl.useProgram(LINE.p);
-          gl.uniform1f(LINE.u.uW, (o.line || 1.4) * dpr); gl.uniform1f(LINE.u.uEps, o.eps || .012); gl.uniform1f(LINE.u.uMode, o.mode == null ? 2 : o.mode);
+          gl.uniform1f(LINE.u.uW, (o.line || 1.4) * dpr); gl.uniform1f(LINE.u.uEps, o.eps || .006); gl.uniform1f(LINE.u.uPx, 2 * Math.tan((o.cam.fov || 32) * Math.PI / 360) / H); gl.uniform1f(LINE.u.uMode, o.mode == null ? 2 : o.mode);
           gl.uniform3fv(LINE.u.uInk, C.ink); gl.uniform3fv(LINE.u.uAcc, C.acc);
           gl.uniform3fv(LINE.u.uMat, new Float32Array(M.MAT.map((c, i) => (i === 5 ? C.ink : c)).flat()));
           gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
