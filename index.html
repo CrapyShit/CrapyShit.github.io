@@ -655,6 +655,7 @@ body[data-view="page"] .lore--bg{display:none}
   </div>
 </div>
 
+<script src="js/flower-gl.js"></script>
 <script>
 (() => {
 'use strict';
@@ -673,7 +674,7 @@ const SITE = {
     controls: { dark: 'media/stage/oni_dark_controls.webm', light: 'media/stage/oni_light_controls.webm' },
     reel: 'https://youtu.be/6N0kjsM0SSk' },   // reel: a YouTube link or a video file
   intro: 'always', // the intro behind the home page: 'always' plays on every load, 'once' once per browser, 'off' never
-  intros: ['origin', 'vault'],   // intros to pick from at random on each load (never the same one twice in a row)
+  intros: ['origin', 'vault', 'bloom'],   // intros to pick from at random on each load (never the same one twice in a row)
   cast: 'Proto',   // the character the origin assembles: shown on the rack label and in the last caption
   cv: '',          // path to your CV PDF
   emptyTiles: 0    // the Work page pads its grid with empty slots up to this many tiles; set to 0 once it is full
@@ -739,6 +740,7 @@ const T = {
     'lore.k': 'Origin', 'lore.1': 'Uncharted system', 'lore.2': 'A moon that built itself', 'lore.3': 'The data center',
     'lore.4': 'Digitising', 'lore.5': '{cast} online', 'lore.skip': 'Skip', 'lore.replay': 'Replay intro',
     'vault.1': 'Archive', 'vault.2': 'Searching', 'vault.3': 'Match', 'vault.4': 'Release', 'vault.5': '{cast} online',
+    'bloom.1': 'Signal', 'bloom.2': 'Rain', 'bloom.3': 'Notice', 'bloom.4': 'Chosen', 'bloom.5': '{cast} online',
     'side.slot': 'Detail loop slot, 1:1', 'side.works': 'Works in',
     'inside.lede': 'Scroll to take the character apart, in the order a rig is built.',
     's1': 'Shaded', 's2': 'Wireframe', 's3': 'Skeleton', 's4': 'Controls',
@@ -774,6 +776,7 @@ const T = {
     'lore.k': '起源', 'lore.1': '未登録の星系', 'lore.2': '自らを造った月', 'lore.3': 'データセンター',
     'lore.4': 'デジタル化', 'lore.5': '{cast} 起動', 'lore.skip': 'スキップ', 'lore.replay': 'イントロをもう一度再生',
     'vault.1': 'アーカイブ', 'vault.2': '検索中', 'vault.3': '一致', 'vault.4': '解放', 'vault.5': '{cast} 起動',
+    'bloom.1': '信号', 'bloom.2': '雨', 'bloom.3': '気づき', 'bloom.4': '選ばれた一輪', 'bloom.5': '{cast} 起動',
     'side.slot': 'ディテールループ枠 1:1', 'side.works': '使用ツール',
     'inside.lede': 'スクロールすると、リグを組む順番でキャラクターが分解されていきます。',
     's1': 'シェーディング', 's2': 'ワイヤーフレーム', 's3': 'スケルトン', 's4': 'コントローラー',
@@ -1949,19 +1952,138 @@ const lore = (() => {
   }
 
   /* ----- placing, timing, drawing ----- */
-  const RUN = { origin: 1, vault: 1 }, LIST = (SITE.intros || ['origin']).filter(n => RUN[n]);
+  const RUN = { origin: 1, vault: 1, bloom: 1 }, LIST = (SITE.intros || ['origin']).filter(n => RUN[n]);
   if (!LIST.length) LIST.push('origin');
   function pick() {                                                       // a random intro, never the one shown last time
     const prev = store.get('intro-last'), pool = LIST.length > 1 ? LIST.filter(n => n !== prev) : LIST, m = pool[Math.random() * pool.length | 0];
     store.set('intro-last', m); return m;
   }
   let mode = pick();
-  const endT = () => (mode === 'vault' ? V_END : END_T);
-  const clock_t = () => (mode === 'origin' ? story(clock) : clock);
+  /* for checking an intro: ?intro=bloom plays that one, &at=6.8 freezes it at that second */
+  const QS = new URLSearchParams(location.search), AT = QS.has('at') ? +QS.get('at') : null;
+  if (RUN[QS.get('intro')]) mode = QS.get('intro');
   let cw = 0, ch = 0, cd = 1, clock = -.35, last = 0, rafL = 0, done = false, beat = -1, lastY = -1, odd = false;
+  /* ===== intro 3: bloom =====
+     The flower heads (js/flower-gl.js, WebGL, drawn on their own canvas above this one) rain down, stall and all turn
+     to look at you, then drop away. One head rezzes in, faces front and rushes the camera with its smile lined up
+     on the stage; the mouth becomes a window onto the digital floor, we go through it, the mouth's outline flies out
+     past the screen and the figure scans in. Falls back to the other intros when WebGL2 or the model is missing. */
+  const B_END = 9.9, BBEAT = [0, 1.2, 3.6, 4.9, 7.6], B_THRU = 7.58, B_CAMZ = 14, B_TAN = Math.tan(16 * Math.PI / 180), B_HS = 1.3;
+  const gcv = mk('canvas', 'lore'), FGL = window.FlowerGL;
+  gcv.setAttribute('aria-hidden', 'true');
+  let FG = FGL ? undefined : null, fgSince = performance.now(), glUsed = false;
+  if (FGL && (SITE.intros || []).includes('bloom')) FGL.create(gcv, 'media/flower/flower-head.bin').then(r => { FG = r; if (!r) dropBloom(); });
+  else FG = null;
+  const B = { drops: [], last: -1, hull: null, hullC: null };
+  function bloomReset() {
+    const R = Math.random;
+    B.drops = Array.from({ length: 20 }, (_, i) => ({
+      ts: .25 + 3.1 * Math.pow(i / 20, .75) + R() * .15, fx: R() * 2 - 1, z: -9 + R() * 11, s: .8 + R() * .4, y: null, v: .9 + R() * .5,
+      q: FGL.qax([R() - .5, R() - .5, (R() - .5) * .3], (R() - .5) * 2.4), w: [R() - .5, R() - .5, R() - .5], ws: .3 + R() * .7,
+      face: FGL.qax([R() - .5, R() - .5, 0], R() * .35), g: 0, snap: 0, jit: 0, a: 1, mid: i < 7 ? .85 - R() * 1.1 : null }));
+    B.drops[0].ts = .15; B.drops[0].mid = .35; B.drops[0].fx = .25;   // the first one blinks in on its own
+    B.last = -1; B.hull = null;
+  }
+  const bHalf = z => (B_CAMZ - z) * B_TAN;
+  function bProj(p, asp) { const d = Math.max(.05, B_CAMZ - p[2]); return [(p[0] / (d * B_TAN * asp) * .5 + .5) * cw, (.5 - p[1] / (d * B_TAN) * .5) * ch, d]; }
+  function hull(pts) {                                                   // convex hull, monotone chain
+    const P = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]), x = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]), lo = [], up = [];
+    P.forEach(p => { while (lo.length > 1 && x(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); });
+    P.slice().reverse().forEach(p => { while (up.length > 1 && x(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); });
+    return lo.slice(0, -1).concat(up.slice(0, -1));
+  }
+  function bloom(G, t, dry) {
+    if (!FG) return 1;
+    if (!B.drops.length || t < B.last - .01) bloomReset();
+    if (!dry) {                                                            // a jump ahead (a frozen ?at= view) replays the rain up to it
+      let x = B.last < 0 ? 0 : B.last;
+      if (t - x > .06) { if (B.last < 0) B.last = 0; for (x += .05; x < t; x += .05) bloom(G, x, true); }
+    }
+    const dt = B.last < 0 ? 0 : cl(t - B.last, 0, .05); B.last = t;
+    const asp = cw / Math.max(1, ch), fit = Math.min(1, Math.max(.45, asp / 1.4)), R = FG.radius;
+    const floorY = reveal.getBoundingClientRect().bottom - cv.getBoundingClientRect().top;
+    const items = [];
+
+    /* the rain: falls, stalls at 3.6 while every head turns to you, drops away fast from 5 */
+    const spd = t < 3.6 ? 1 : t < 5 ? mix(1, .04, st(3.6, 4.2, t)) : mix(.04, 4, st(5, 5.7, t));
+    const look = st(3.6, 4.3, t) * (1 - st(5, 5.5, t)), spin = 1 - st(3.6, 4.1, t) + st(5, 5.4, t), fade = 1 - st(5.4, 6.3, t);
+    if (fade > 0) B.drops.forEach((d, i) => {
+      const hh = bHalf(d.z), r = R * d.s * fit * 1.1;
+      if (t < d.ts) { d.y = null; return; }
+      if (d.y == null) d.y = d.mid == null ? hh + r : d.mid * hh;           // a few rez in mid-air, the rest fall in from the top
+      d.y -= d.v * 2.2 * spd * dt;
+      if (d.y < -hh - r && t < 3.3) { d.y = hh + r; d.fx = Math.random() * 2 - 1; }
+      d.q = FGL.qmul(d.q, FGL.qax(d.w, d.ws * spin * dt));
+      const age = t - d.ts, rez = age < .3;
+      if (d.g <= 0 && Math.random() < dt * .4) d.g = .1 + Math.random() * .3;
+      if (d.g > 0 || rez) { d.g -= dt; d.snap = ((t * 18 | 0) + i) % 3 ? 6 + Math.random() * 10 : 0; d.jit = Math.random() < .3 ? (Math.random() - .5) * 50 : 0; d.a = Math.random() < .3 ? .25 : 1; }
+      else { d.snap = 0; d.jit = 0; d.a = 1; }
+      items.push({ p: [d.fx * hh * asp, d.y, d.z], q: FGL.slerp(d.q, d.face, look), s: d.s * fit, snap: d.snap, jit: d.jit, alpha: d.a * fade });
+    });
+
+    /* the chosen one: rezzes in turning to face front, drifts, then rushes the camera with the mouth on the stage */
+    let thru = t >= B_THRU, mouthHull = null;
+    if (t >= 4.9 && !thru) {
+      const u = cl((t - 6) / (B_THRU - 6)), ez = u * u * u * .85 + u * .15, s = B_HS * fit, mz0 = -3 + .315 * s;
+      const zm = t < 6 ? mix(-5, -3, eo((t - 4.9) / 1.1)) + .315 * s : mix(mz0, B_CAMZ - .45, ez);
+      const calm = 1 - st(6, 7.2, t), turn = Math.PI * (1 - eo((t - 4.9) / .7));
+      const q = FGL.qmul(FGL.qax([0, 1, 0], turn + .32 * Math.sin(t * 2.2) * calm), FGL.qax([1, 0, 0], .18 * Math.sin(t * 1.7 + 1) * calm));
+      const tx = mix(G.A[0], G.ox, st(5.2, 6.8, t)), ty = mix(G.A[1], G.oy - 1.25 * CP * G.S, st(5.2, 6.8, t));
+      const d = B_CAMZ - zm, aim = [(tx / cw * 2 - 1) * d * B_TAN * asp, (1 - ty / ch * 2) * d * B_TAN, zm];
+      const mo = FGL.qrot(q, FG.mouth.centre.map(x => x * s)), p = [aim[0] - mo[0], aim[1] - mo[1], aim[2] - mo[2]];
+      const rez = t < 5.45, fl = rez && (t * 20 | 0) % 3 === 0;
+      items.push({ p, q, s, snap: rez ? 14 * (1 - st(4.9, 5.45, t)) : 0, alpha: fl ? .3 : 1 });
+      if (t > 6.3) {                                                         // the mouth, on screen, for the window
+        mouthHull = hull(FG.mouth.pts.map(m => { const w = FGL.qrot(q, m.map(x => x * s)); return bProj([p[0] + w[0], p[1] + w[1], p[2] + w[2]], asp); }));
+        B.hull = mouthHull; B.hullC = [tx, ty];
+      }
+    }
+
+    if (dry) return 0;
+    /* the 2D side: the digital floor seen through the mouth, then all around once we are through */
+    if (mouthHull && mouthHull.length > 2) {
+      g.save(); poly(mouthHull); g.clip();
+      g.globalAlpha = 1; g.fillStyle = C.ground; g.fillRect(0, 0, cw, ch); world(G, t + 14, 0);
+      const mc = mouthHull.reduce((a, p) => [a[0] + p[0] / mouthHull.length, a[1] + p[1] / mouthHull.length], [0, 0]);
+      for (let n = 0; n < 7; n++) {                                          // smile-shaped rings rushing past: going in
+        const u = (t * 1.4 + n / 7) % 1, k = .06 + Math.pow(u, 2.2) * .98;
+        g.globalAlpha = Math.sin(u * Math.PI) * .85; g.strokeStyle = n % 3 ? C.ink2 : C.acc; g.lineWidth = 1 + u * 1.5;
+        poly(mouthHull.map(p => [mc[0] + (p[0] - mc[0]) * k, mc[1] + (p[1] - mc[1]) * k])); g.stroke();
+      }
+      g.restore();
+      g.globalAlpha = st(7.0, 7.5, t); g.strokeStyle = C.acc; g.lineWidth = 2; poly(mouthHull); g.stroke();
+    }
+    if (thru) {
+      world(G, t + 14, st(8.3, 9.8, t));
+      const u = (t - B_THRU) / .6;
+      if (B.hull && u < 1) {                                                 // the mouth's edge, flying out past the screen
+        const xs = B.hull.map(p => p[0]), bw = Math.max(1, Math.max(...xs) - Math.min(...xs)), k = cw * .75 / bw * (1 + eo(u) * 2.2), c = B.hullC, sc = pts => pts.map(p => [c[0] + (p[0] - c[0]) * k, c[1] + (p[1] - c[1]) * k]), o = 10 * (1 - u);
+        g.globalAlpha = (1 - u) * .65; g.lineWidth = 2;
+        g.strokeStyle = C.glA; poly(sc(B.hull).map(p => [p[0] - o, p[1]])); g.stroke();
+        g.strokeStyle = C.glB; poly(sc(B.hull).map(p => [p[0] + o, p[1]])); g.stroke();
+        g.globalAlpha = 1 - u; g.strokeStyle = C.acc; g.lineWidth = Math.max(1, 8 * (1 - u)); poly(sc(B.hull)); g.stroke();
+      }
+      tear(t - B_THRU + 10.42);
+    }
+
+    const burst = .9 * st(4.25, 4.35, t) * (1 - st(4.45, 4.8, t)) + .35 * st(1.55, 1.6, t) * (1 - st(1.6, 1.8, t)) + .35 * st(2.7, 2.75, t) * (1 - st(2.75, 2.95, t)) + .55 * st(7.1, 7.55, t);
+    const col = { ink: FGL.rgb(C.ink), acc: FGL.rgb(C.acc), glA: FGL.rgb(C.glA), glB: FGL.rgb(C.glB) };
+    if (items.length) { FG.frame({ items, w: cw, h: ch, dpr: Math.min(1.5, cd), cam: { z: B_CAMZ, near: .2, far: 40 }, colours: col, mode: 2, line: 1.4,
+      amb: still.matches ? 0 : .22, burst: still.matches ? 0 : Math.min(1, burst), time: t, clipBottom: floorY }); glUsed = true; }
+    else if (glUsed) { FG.clear(); glUsed = false; }
+    return thru ? cl((t - 7.9) / .9) : 0;
+  }
+  function dropBloom() {                                                 // no WebGL2 or no model: this intro leaves the list
+    const i = LIST.indexOf('bloom'); if (i >= 0 && LIST.length > 1) LIST.splice(i, 1);
+    if (mode === 'bloom') { mode = pick(); clock = Math.min(clock, 0); beat = -1; }
+  }
+  const endT = () => (mode === 'vault' ? V_END : mode === 'bloom' ? B_END : END_T);
+  const clock_t = () => (mode === 'origin' ? story(clock) : clock);
   function fit() {
     const bg = wide.matches;
     if (!cv.parentNode || bg !== cv.classList.contains('lore--bg')) { cv.classList.toggle('lore--bg', bg); (bg ? document.body : stage).prepend(cv); }
+    if (gcv.previousSibling !== cv) cv.after(gcv);
+    gcv.classList.toggle('lore--bg', bg);
     cw = cv.clientWidth; ch = cv.clientHeight;
     cd = Math.min(2, devicePixelRatio || 1, Math.sqrt(5e6 / Math.max(1, cw * ch)));
     cv.width = oc.width = Math.round(cw * cd); cv.height = oc.height = Math.round(ch * cd);
@@ -1975,7 +2097,7 @@ const lore = (() => {
     return { S, ox, oy, y0, cy: oy - .9436 * CP * S, th: fr / 240 * TAU - .55, B: S * 1.2, A: [ox, cl(seen, oy - 1.5 * CP * S, oy - .95 * CP * S)] };
   }
   function caption(t) {
-    const B = mode === 'vault' ? VBEAT : BEAT;
+    const B = mode === 'vault' ? VBEAT : mode === 'bloom' ? BBEAT : BEAT;
     let i = 0; while (i < 4 && t >= B[i + 1]) i++;
     if (done) i = 5;
     if (i === beat) return;
@@ -2023,7 +2145,8 @@ const lore = (() => {
     g.save(); g.beginPath(); g.rect(0, 0, cw, Math.min(ch, floorY)); g.clip();
     figOp = 1;
     const tt = done && mode !== 'origin' ? Math.max(t, endT()) : t;
-    const rev = mode === 'vault' ? (done ? (vault(G, tt), 1) : vault(G, tt)) : origin(G, t);
+    if (mode !== 'bloom' && glUsed && FG) { FG.clear(); glUsed = false; }
+    const rev = mode === 'vault' ? (done ? (vault(G, tt), 1) : vault(G, tt)) : mode === 'bloom' ? (done ? (bloom(G, tt), 1) : bloom(G, tt)) : origin(G, t);
     g.restore(); g.globalAlpha = 1;
     fig.style.opacity = figOp < 1 ? figOp.toFixed(3) : '';
     fig.style.clipPath = rev >= 1 ? '' : 'inset(0 0 ' + ((1 - rev) * 100).toFixed(2) + '% 0)';
@@ -2034,7 +2157,9 @@ const lore = (() => {
   function tick(now) {
     rafL = 0;
     const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now;
-    if (!still.matches) clock += dt;
+    if (mode === 'bloom' && FG === undefined) { if (now - fgSince > 2500) { FG = null; dropBloom(); } }
+    else if (AT !== null) clock = AT;
+    else if (!still.matches) clock += dt;
     if (!done && (clock >= endT() || still.matches)) finish();
     odd = !odd;
     if (!done || odd || scrollY !== lastY) { lastY = scrollY; render(now); }   // once it has settled, every other frame is enough unless the page is moving

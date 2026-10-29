@@ -60,23 +60,23 @@ button:hover,select:hover{border-color:var(--ink-2)}
 </div>
 <button class="toggle" id="hide" type="button">Hide panel</button>
 <p class="note">The flower head from the Maya scene, every vertex kept. Only silhouettes and creases are drawn, with real hidden-line removal; no render, all live.</p>
+<script src="../js/flower-gl.js"></script>
 <script>
 (() => {
 'use strict';
-const $ = s => document.querySelector(s), root = document.documentElement;
-const cv = $('#gl'), gl = cv.getContext('webgl2', { antialias: true, premultipliedAlpha: true, alpha: true });
-if (!gl) { $('.note').textContent = 'WebGL2 is not available in this browser.'; return; }
-const still = matchMedia('(prefers-reduced-motion: reduce)');
+const $ = s => document.querySelector(s), root = document.documentElement, F = window.FlowerGL;
+const cv = $('#gl'), still = matchMedia('(prefers-reduced-motion: reduce)');
 const DBG = new URLSearchParams(location.search).get('debug');   // ?debug=yaw,pitch shows one big flower, still
 
 /* ---------- settings (panel) ---------- */
 const SET = { n: 22, sp: 1, sz: 1, tb: 1, gx: .5, lw: 1.4, cm: 2 };
 try { Object.assign(SET, JSON.parse(localStorage.getItem('flower-lab') || '{}')); } catch (e) { /* storage blocked */ }
+const fmt = el => (+el.value).toFixed(+el.step < 1 ? 2 : 0);
 Object.keys(SET).forEach(k => {
   const el = $('#' + k), out = el.nextElementSibling;
-  el.value = SET[k]; if (out && out.tagName === 'OUTPUT') out.textContent = (+el.value).toFixed(el.step < 1 ? 2 : 0);
+  el.value = SET[k]; if (out && out.tagName === 'OUTPUT') out.textContent = fmt(el);
   el.addEventListener('input', () => {
-    SET[k] = +el.value; if (out && out.tagName === 'OUTPUT') out.textContent = (+el.value).toFixed(el.step < 1 ? 2 : 0);
+    SET[k] = +el.value; if (out && out.tagName === 'OUTPUT') out.textContent = fmt(el);
     try { localStorage.setItem('flower-lab', JSON.stringify(SET)); } catch (e) { /* storage blocked */ }
   });
 });
@@ -84,289 +84,77 @@ $('#th').addEventListener('click', () => {
   const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
   root.dataset.theme = dark ? 'light' : 'dark'; readColours();
 });
-$('#burst').addEventListener('click', () => { burst = 1; });
+$('#burst').addEventListener('click', () => { kick = 1; });
 $('#copy').addEventListener('click', () => { navigator.clipboard && navigator.clipboard.writeText(JSON.stringify(SET)); $('#copy').textContent = 'Copied'; setTimeout(() => ($('#copy').textContent = 'Copy'), 1200); });
 $('#hide').addEventListener('click', () => { const p = $('#panel'); p.hidden = !p.hidden; $('#hide').textContent = p.hidden ? 'Show panel' : 'Hide panel'; });
 
-/* ---------- colours from the CSS tokens ---------- */
 let COL = {};
-const rgb = h => { h = h.trim().replace('#', ''); if (h.length === 3) h = h.replace(/./g, '$&$&'); const n = parseInt(h, 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
 function readColours() {
-  const cs = getComputedStyle(root), v = n => rgb(cs.getPropertyValue(n));
-  COL = { ink: v('--ink'), ink2: v('--ink-2'), acc: v('--accent'), glA: v('--gl-a'), glB: v('--gl-b'), dark: v('--ground')[0] < .5 };
+  const cs = getComputedStyle(root), v = n => F.rgb(cs.getPropertyValue(n));
+  COL = { ink: v('--ink'), acc: v('--accent'), glA: v('--gl-a'), glB: v('--gl-b') };
 }
 readColours();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColours);
-/* the Maya material colours: head, yellow, orange, red, light orange, eyes */
-const MAT = [[.889, .72, .522], [1, .92, .2], [1, .444, .115], [1, .173, .173], [1, .795, .179], [.2, .2, .2]];
-
-/* ---------- GL helpers ---------- */
-function sh(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
-function prog(vs, fs) { const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p)); const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); u[a.name.replace('[0]', '')] = gl.getUniformLocation(p, a.name); } return { p, u }; }
-function buf(data, target = gl.ARRAY_BUFFER, usage = gl.STATIC_DRAW) { const b = gl.createBuffer(); gl.bindBuffer(target, b); gl.bufferData(target, data, usage); return b; }
-
-/* Shared by both passes: per-instance placement (position, quaternion, scale) and glitch values. */
-const INST = `
-in vec3 iPos; in vec4 iRot; in vec4 iFx;   // iFx: scale, pixel snap, alpha, x jitter
-uniform mat4 uVP; uniform vec3 uCam; uniform vec2 uRes;
-vec3 qrot(vec4 q, vec3 v) { return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v); }
-vec3 world(vec3 p) { return iPos + qrot(iRot, p * iFx.x); }
-vec4 snap(vec4 c) {                          // a flower mid-glitch is drawn on a coarse pixel grid, shifted sideways
-  vec2 s = c.xy / c.w * uRes * .5;
-  s.x += iFx.w;
-  if (iFx.y > 1.0) s = floor(s / iFx.y + .5) * iFx.y;
-  return vec4(s / (uRes * .5) * c.w, c.z, c.w);
-}`;
-
-/* Pass 1: the flower's faces, depth only, so lines behind them are hidden. */
-const FILL = prog(`#version 300 es
-in vec3 aP;` + INST + `
-void main() { gl_Position = snap(uVP * vec4(world(aP), 1.0)); }`,
-`#version 300 es
-precision mediump float; out vec4 o; void main() { o = vec4(0); }`);
-
-/* Pass 2: every edge as a screen-space quad, kept only if it is a silhouette (one face toward the camera, one away)
-   or a crease (eyes, mouth) with at least one face toward the camera. */
-const LINE = prog(`#version 300 es
-in vec3 aA; in vec3 aB; in vec3 aN1; in vec3 aN2; in vec4 aK;   // aK: along (0/1), side (-1/1), crease, material` + INST + `
-uniform float uW, uMode; uniform vec3 uInk, uInk2, uAcc; uniform vec3 uMat[6];
-out vec4 vC;
-void main() {
-  vec3 wa = world(aA), wb = world(aB);
-  vec3 n1 = qrot(iRot, aN1), n2 = qrot(iRot, aN2), v = uCam - (wa + wb) * .5;
-  bool always = aK.z > 1.5, face = aK.z > 2.5;
-  bool f1 = dot(n1, v) > 0.0, f2 = dot(n2, v) > 0.0, sil = !always && f1 != f2, cr = !always && aK.z > .5 && (f1 || f2);
-  if (!(sil || cr || always)) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vC = vec4(0); return; }
-  vec4 ca = snap(uVP * vec4(wa, 1.0)), cb = snap(uVP * vec4(wb, 1.0));
-  vec2 sa = ca.xy / ca.w * uRes * .5, sb = cb.xy / cb.w * uRes * .5, d = sb - sa;
-  float l = length(d); d = l > 1e-4 ? d / l : vec2(1, 0);
-  vec2 nr = vec2(-d.y, d.x);
-  vec4 c = mix(ca, cb, aK.x);
-  vec2 s = mix(sa, sb, aK.x) + nr * aK.y * uW * .5 + d * (aK.x * 2.0 - 1.0) * uW * .5;
-  gl_Position = vec4(s / (uRes * .5) * c.w, c.z - .0006 * c.w, c.w);
-  int m = int(aK.w + .5);
-  vec3 col = uMode < .5 ? uInk : uMode < 1.5 ? uAcc : uMode < 2.5 ? ((cr && !sil) || face ? uAcc : uInk) : uMat[m];
-  float far = clamp((-iPos.z - 1.0) / 9.0, 0.0, 1.0);
-  float a = iFx.z * mix(1.0, .38, far);
-  vC = vec4(col * a, a);
-}`,
-`#version 300 es
-precision mediump float; in vec4 vC; out vec4 o; void main() { o = vC; }`);
-
-/* Pass 3: the glitch, sampling the line layer: torn slices, block shifts and a red/cyan split. */
-const POST = prog(`#version 300 es
-in vec2 aQ; out vec2 vU; void main() { vU = aQ * .5 + .5; gl_Position = vec4(aQ, 0, 1); }`,
-`#version 300 es
-precision highp float;
-in vec2 vU; out vec4 o;
-uniform sampler2D uT; uniform vec2 uRes; uniform float uTime, uG, uB; uniform vec3 uA1, uA2;
-float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-void main() {
-  vec2 uv = vU, px = 1.0 / uRes;
-  float f = floor(uTime * 14.0), g = clamp(uG * .35 + uB, 0.0, 1.0);
-  float rows = mix(90.0, 26.0, uB), band = floor(uv.y * rows);
-  if (h(vec2(band, f)) < g * .22) uv.x += (h(vec2(band, f + 7.0)) - .5) * (.03 + .12 * uB);       // torn rows
-  vec2 blk = floor(uv * vec2(18.0, 32.0));
-  if (h(blk + f * 1.7) < g * .035) uv += (vec2(h(blk + 3.1), h(blk + 9.2)) - .5) * vec2(.12, .04); // block shift
-  float sp = (1.0 + 2.5 * uG + 14.0 * uB) * px.x;
-  vec4 c = texture(uT, uv);
-  float ga = texture(uT, uv - vec2(sp, 0)).a, gb = texture(uT, uv + vec2(sp, 0)).a;
-  float k = clamp(.25 * uG + uB, 0.0, 1.0);
-  vec4 ghost = vec4(uA1 * ga + uA2 * gb, max(ga, gb)) * k * .85;
-  o = c + ghost * (1.0 - c.a);
-}`);
-
-/* ---------- the flower head: load, build faces, edges and creases ---------- */
-const VAO_FILL = gl.createVertexArray(), VAO_LINE = gl.createVertexArray(), VAO_POST = gl.createVertexArray();
-let triCount = 0, edgeCount = 0, ready = false, R = 1;
-const MAXN = 60, instBuf = buf(new Float32Array(MAXN * 15), gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW), inst = new Float32Array(MAXN * 15);
-
-function bindInst(p) {
-  gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
-  [['iPos', 3, 0], ['iRot', 4, 3], ['iFx', 4, 7]].forEach(([n, s, o]) => {
-    const l = gl.getAttribLocation(p, n); if (l < 0) return;
-    gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, s, gl.FLOAT, false, 60, o * 4); gl.vertexAttribDivisor(l, 1);
-  });
-}
-
-fetch('media/flower-head.bin').then(r => r.arrayBuffer()).then(ab => {
-  const hd = new DataView(ab), nv = hd.getUint32(4, true), nf = hd.getUint32(8, true), ns = hd.getUint32(12, true);
-  const o0 = 20, o1 = o0 + nv * 6, o2 = o1 + nf * 8, o3 = o2 + nf + ((o2 + nf) % 2);
-  const q = new Int16Array(ab, o0, nv * 3), fc = new Uint16Array(ab, o1, nf * 4), mt = new Uint8Array(ab, o2, nf);
-  const sq = new Int16Array(ab, o3, ns * 6), stg = new Uint8Array(ab, o3 + ns * 12, ns);
-  const P = new Float32Array(nv * 3); for (let i = 0; i < nv * 3; i++) P[i] = q[i] / 32767;
-  R = 0; for (let i = 0; i < nv; i++) R = Math.max(R, Math.hypot(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]));
-  const v = i => [P[i * 3], P[i * 3 + 1], P[i * 3 + 2]];
-  const N = new Float32Array(nf * 3);
-  for (let f = 0; f < nf; f++) {                                        // quad normals from the two diagonals
-    const a = v(fc[f * 4]), b = v(fc[f * 4 + 1]), c = v(fc[f * 4 + 2]), d = v(fc[f * 4 + 3]);
-    const x = [c[0] - a[0], c[1] - a[1], c[2] - a[2]], y = [d[0] - b[0], d[1] - b[1], d[2] - b[2]];
-    const n = [x[1] * y[2] - x[2] * y[1], x[2] * y[0] - x[0] * y[2], x[0] * y[1] - x[1] * y[0]], l = Math.hypot(...n) || 1;
-    N.set([n[0] / l, n[1] / l, n[2] / l], f * 3);
-  }
-  const tri = new Uint16Array(nf * 6);
-  for (let f = 0; f < nf; f++) tri.set([fc[f * 4], fc[f * 4 + 1], fc[f * 4 + 2], fc[f * 4], fc[f * 4 + 2], fc[f * 4 + 3]], f * 6);
-  triCount = tri.length;
-  gl.bindVertexArray(VAO_FILL);
-  buf(P); const lp = gl.getAttribLocation(FILL.p, 'aP'); gl.enableVertexAttribArray(lp); gl.vertexAttribPointer(lp, 3, gl.FLOAT, false, 0, 0);
-  buf(tri, gl.ELEMENT_ARRAY_BUFFER); bindInst(FILL.p);
-
-  const E = new Map();
-  for (let f = 0; f < nf; f++) for (let k = 0; k < 4; k++) {
-    const a = fc[f * 4 + k], b = fc[f * 4 + (k + 1) % 4], key = a < b ? a * 65536 + b : b * 65536 + a, e = E.get(key);
-    if (e) e.push(f); else E.set(key, [Math.min(a, b), Math.max(a, b), f]);
-  }
-  /* creases: only the sharp ones (mouth, the cleft and the ear tips); the head's soft bevels are left out */
-  const COS = Math.cos(38 * Math.PI / 180), list = [...E.values()];
-  edgeCount = list.length + ns;
-  const V4 = new Float32Array(edgeCount * 4 * 16), I = new Uint32Array(edgeCount * 6);
-  list.forEach(([a, b, f1, f2 = f1], i) => {
-    const n1 = [N[f1 * 3], N[f1 * 3 + 1], N[f1 * 3 + 2]], n2 = [N[f2 * 3], N[f2 * 3 + 1], N[f2 * 3 + 2]];
-    const crease = n1[0] * n2[0] + n1[1] * n2[1] + n1[2] * n2[2] < COS ? 1 : 0, m = mt[f1];
-    [[0, -1], [0, 1], [1, -1], [1, 1]].forEach(([t, s], j) => V4.set([...v(a), ...v(b), ...n1, ...n2, t, s, crease, m], (i * 4 + j) * 16));
-    const o = i * 4; I.set([o, o + 1, o + 2, o + 2, o + 1, o + 3], i * 6);
-  });
-  /* the curves where parts pass through each other (head into petals, petal into petal, eyes into head),
-     computed once from the model: drawn wherever they are not hidden. Tag 2 (eyes) counts as a face feature. */
-  const sv = k => [sq[k] / 32767, sq[k + 1] / 32767, sq[k + 2] / 32767];
-  for (let k = 0; k < ns; k++) {
-    const i = list.length + k, a = sv(k * 6), b = sv(k * 6 + 3), kind = stg[k] === 2 ? 3 : 2, m = stg[k] === 2 ? 5 : stg[k] === 0 ? 0 : 2;
-    [[0, -1], [0, 1], [1, -1], [1, 1]].forEach(([t, s], j) => V4.set([...a, ...b, 0, 0, 0, 0, 0, 0, t, s, kind, m], (i * 4 + j) * 16));
-    const o = i * 4; I.set([o, o + 1, o + 2, o + 2, o + 1, o + 3], i * 6);
-  }
-  gl.bindVertexArray(VAO_LINE);
-  buf(V4);
-  [['aA', 3, 0], ['aB', 3, 3], ['aN1', 3, 6], ['aN2', 3, 9], ['aK', 4, 12]].forEach(([n, s, o]) => {
-    const l = gl.getAttribLocation(LINE.p, n); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, s, gl.FLOAT, false, 64, o * 4);
-  });
-  buf(I, gl.ELEMENT_ARRAY_BUFFER); bindInst(LINE.p);
-  gl.bindVertexArray(null);
-  ready = true;
-});
-gl.bindVertexArray(VAO_POST);
-buf(new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1])); { const l = gl.getAttribLocation(POST.p, 'aQ'); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 2, gl.FLOAT, false, 0, 0); }
-gl.bindVertexArray(null);
-
-/* ---------- off-screen target for the glitch pass ---------- */
-let fbo = null, tex = null, rbo = null, W = 0, H = 0, dpr = 1, msFbo = null, msRbo = null, msDepth = null;
-function resize() {
-  dpr = Math.min(2, devicePixelRatio || 1);
-  const w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
-  if (w === W && h === H) return;
-  W = cv.width = w; H = cv.height = h;
-  [tex].forEach(t => t && gl.deleteTexture(t)); [rbo, msRbo, msDepth].forEach(r => r && gl.deleteRenderbuffer(r)); [fbo, msFbo].forEach(f => f && gl.deleteFramebuffer(f));
-  const samples = Math.min(4, gl.getParameter(gl.MAX_SAMPLES));
-  msFbo = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, msFbo);          // drawn here with MSAA, then resolved into tex
-  msRbo = gl.createRenderbuffer(); gl.bindRenderbuffer(gl.RENDERBUFFER, msRbo); gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, gl.RGBA8, W, H);
-  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, msRbo);
-  msDepth = gl.createRenderbuffer(); gl.bindRenderbuffer(gl.RENDERBUFFER, msDepth); gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, gl.DEPTH_COMPONENT24, W, H);
-  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, msDepth);
-  tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex); gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, W, H);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  fbo = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-}
-addEventListener('resize', resize); resize();
-
-/* ---------- camera ---------- */
-const FOV = 32 * Math.PI / 180, CAMZ = 14, TAN = Math.tan(FOV / 2);
-function viewProj() {
-  /* perspective times the view (camera at 0,0,CAMZ looking down -z), column-major */
-  const a = W / H, f = 1 / TAN, n = 4, fr = 40, m = new Float32Array(16);
-  m[0] = f / a; m[5] = f; m[10] = (fr + n) / (n - fr); m[11] = -1;
-  m[14] = m[10] * -CAMZ + 2 * fr * n / (n - fr); m[15] = CAMZ;
-  return m;
-}
 
 /* ---------- the rain ---------- */
-const rnd = (a, b) => a + Math.random() * (b - a);
-const qmul = (a, b) => [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1], a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0], a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3], a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]];
-const qax = (ax, an) => { const l = Math.hypot(...ax) || 1, s = Math.sin(an / 2); return [ax[0] / l * s, ax[1] / l * s, ax[2] / l * s, Math.cos(an / 2)]; };
-const halfH = z => (CAMZ - z) * TAN;
-const fitK = () => Math.min(1, Math.max(.45, W / H / 1.4));       // narrow (portrait) screens get smaller flowers
+const CAMZ = 14, TAN = Math.tan(16 * Math.PI / 180), rnd = (a, b) => a + Math.random() * (b - a);
+const halfH = z => (CAMZ - z) * TAN, aspect = () => cv.clientWidth / Math.max(1, cv.clientHeight);
+const fitK = () => Math.min(1, Math.max(.45, aspect() / 1.4));     // narrow (portrait) screens get smaller flowers
+let R = 1, gfx = null;
 const drops = [];
 function spawn(d, anywhere) {
   d.z = rnd(-10, 3); d.s = rnd(.75, 1.25);
-  const hh = halfH(d.z), hw = hh * W / H, r = R * d.s * SET.sz * fitK() * 1.05;
+  const hh = halfH(d.z), hw = hh * aspect(), r = R * d.s * SET.sz * fitK() * 1.05;
   d.x = rnd(-hw, hw); d.y = anywhere ? rnd(-hh, hh) : hh + r + rnd(0, hh * .6);
-  d.v = rnd(.8, 1.3) * (1.2 + (d.z + 10) * .06);                       // nearer ones fall a little faster
-  d.q = qmul(qax([rnd(-1, 1), rnd(-1, 1), rnd(-.3, .3)], rnd(-1.2, 1.2)), [0, 0, 0, 1]);   // mostly face-on to start
-  d.w = [rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)]; d.ws = rnd(.25, .9);
-  d.sw = rnd(0, 6.3); d.g = 0; d.snap = 0; d.jit = 0; d.alpha = 1;
+  d.v = rnd(.8, 1.3) * (1.2 + (d.z + 10) * .06);
+  d.q = F.qax([rnd(-1, 1), rnd(-1, 1), rnd(-.3, .3)], rnd(-1.2, 1.2));
+  d.w = [rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)]; d.ws = rnd(.25, .9); d.sw = rnd(0, 6.3); d.g = 0;
 }
+/* a slow device keeps fewer flowers: if frames run long, the count steps down (not below 8) */
+let cap = 64, slow = 0, frames = 0;
 function ensure() {
   if (DBG !== null) {
     const [yw, pt] = DBG.split(',').map(Number);
-    drops.length = 0; drops.push({ x: 0, y: 0, z: 2, s: 1, v: 0, q: qmul(qax([0, 1, 0], (yw || 0) * Math.PI / 180), qax([1, 0, 0], (pt || 0) * Math.PI / 180)), w: [0, 1, 0], ws: 0, sw: 0, g: 0, snap: 0, jit: 0, alpha: 1 });
-    SET.sz = 2.6; SET.gx = 0; return;
+    if (!drops.length) drops.push({ x: 0, y: 0, z: 2, s: 2.6, q: F.qmul(F.qax([0, 1, 0], (yw || 0) * Math.PI / 180), F.qax([1, 0, 0], (pt || 0) * Math.PI / 180)), dbg: 1 });
+    return;
   }
   const n = Math.min(SET.n, cap);
   while (drops.length < n) { const d = {}; spawn(d, true); drops.push(d); }
   drops.length = Math.min(drops.length, n);
 }
 
-let burst = 0, last = performance.now(), t = 0, nextBurst = 3;
-/* a slow device keeps fewer flowers: after a few seconds, if frames run long, the count steps down (not below 8) */
-let cap = 60, slow = 0, frames = 0;
+/* glitch: the slider sets everything (0 none, 1 heavy and constant); the button fires a full burst at any setting */
+let kick = 0, auto = 0, last = performance.now(), t = 0, nextAuto = 3;
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   if (!still.matches) t += dt;
-  resize();
   if (!document.hidden && ++frames > 90) { slow = slow * .95 + (dt > .026 ? 1 : 0) * .05; if (slow > .5 && cap > 8) { cap = Math.max(8, Math.min(cap, drops.length) - 4); slow = 0; } }
   ensure();
-  if (ready) {
-    const mv = still.matches ? 0 : dt * SET.sp;
-    if (t > nextBurst) { burst = Math.max(burst, .55 + Math.random() * .45 * SET.gx); nextBurst = t + rnd(2.5, 6) / Math.max(.2, SET.gx); }
-    burst = Math.max(0, burst - dt * 3.2);
-    drops.sort((a, b) => a.z - b.z);
-    drops.forEach((d, i) => {
-      if (DBG !== null) { inst.set([0, 0, 2, ...d.q, d.s * SET.sz, 0, 1, 0], i * 15); return; }
-      d.y -= d.v * mv; d.sw += mv * .8;
-      const hh = halfH(d.z);
-      if (d.y < -hh - R * d.s * SET.sz * fitK() * 1.1) spawn(d, false);
-      d.q = qmul(d.q, qax(d.w, d.ws * SET.tb * mv));
-      /* each flower glitches on its own now and then: snaps to a pixel grid, jumps sideways, flickers */
-      if (!still.matches && d.g <= 0 && Math.random() < dt * .35 * SET.gx) d.g = rnd(.12, .45);
-      if (d.g > 0) {
-        d.g -= dt;
-        const step = (t * 18 | 0) + i * 7;
-        d.snap = (step % 3 ? rnd(6, 16) : 0) * dpr; d.jit = (Math.random() < .35 ? rnd(-30, 30) : 0) * dpr; d.alpha = Math.random() < .25 ? .25 : 1;
-      } else { d.snap = burst > .3 && i % 3 === 0 ? 8 * dpr : 0; d.jit = 0; d.alpha = 1; }
-      inst.set([d.x + Math.sin(d.sw) * .25, d.y, d.z, ...d.q, d.s * SET.sz * fitK(), d.snap, d.alpha, d.jit], i * 15);
-    });
-    gl.bindBuffer(gl.ARRAY_BUFFER, instBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, inst, 0, drops.length * 15);
-
-    const VP = viewProj(), ink = COL.ink, cam = [0, 0, CAMZ];
-    gl.bindFramebuffer(gl.FRAMEBUFFER, msFbo); gl.viewport(0, 0, W, H);
-    gl.clearColor(0, 0, 0, 0); gl.clearDepth(1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
-    [FILL, LINE].forEach(P => { gl.useProgram(P.p); gl.uniformMatrix4fv(P.u.uVP, false, VP); gl.uniform3fv(P.u.uCam, cam); gl.uniform2f(P.u.uRes, W, H); });
-    gl.useProgram(FILL.p); gl.colorMask(false, false, false, false);
-    gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.5, 2);
-    gl.bindVertexArray(VAO_FILL); gl.drawElementsInstanced(gl.TRIANGLES, triCount, gl.UNSIGNED_SHORT, 0, drops.length);
-    gl.disable(gl.POLYGON_OFFSET_FILL); gl.colorMask(true, true, true, true);
-    gl.useProgram(LINE.p);
-    gl.uniform1f(LINE.u.uW, SET.lw * dpr); gl.uniform1f(LINE.u.uMode, SET.cm);
-    gl.uniform3fv(LINE.u.uInk, ink); gl.uniform3fv(LINE.u.uInk2, COL.ink2); gl.uniform3fv(LINE.u.uAcc, COL.acc);
-    gl.uniform3fv(LINE.u.uMat, new Float32Array(MAT.map((c, i) => (i === 5 ? ink : c)).flat()));
-    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
-    gl.bindVertexArray(VAO_LINE); gl.drawElementsInstanced(gl.TRIANGLES, edgeCount * 6, gl.UNSIGNED_INT, 0, drops.length);
-    gl.depthMask(true); gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, msFbo); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, fbo);
-    gl.blitFramebuffer(0, 0, W, H, 0, 0, W, H, gl.COLOR_BUFFER_BIT, gl.NEAREST);
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H);
-    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(POST.p); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.uniform1i(POST.u.uT, 0); gl.uniform2f(POST.u.uRes, W, H); gl.uniform1f(POST.u.uTime, t);
-    gl.uniform1f(POST.u.uG, SET.gx); gl.uniform1f(POST.u.uB, still.matches ? 0 : burst * SET.gx * 1.4);
-    gl.uniform3fv(POST.u.uA1, COL.glA); gl.uniform3fv(POST.u.uA2, COL.glB);
-    gl.bindVertexArray(VAO_POST); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.bindVertexArray(null);
-  }
+  const gx = DBG !== null ? 0 : SET.gx, mv = still.matches ? 0 : dt * SET.sp;
+  if (gx > 0 && t > nextAuto) { auto = .4 + .6 * gx; nextAuto = t + rnd(2.5, 6) / (.3 + gx); }
+  auto = Math.max(0, auto - dt * 3.2); kick = Math.max(0, kick - dt * 2.6);
+  const burst = still.matches ? 0 : Math.max(kick, auto * gx);
+  const items = drops.map((d, i) => {
+    if (d.dbg) return { p: [0, 0, 2], q: d.q, s: d.s * fitK() };
+    d.y -= d.v * mv; d.sw += mv * .8;
+    if (d.y < -halfH(d.z) - R * d.s * SET.sz * fitK() * 1.1) spawn(d, false);
+    d.q = F.qmul(d.q, F.qax(d.w, d.ws * SET.tb * mv));
+    let snap = 0, jit = 0, alpha = 1;
+    if (!still.matches && d.g <= 0 && Math.random() < dt * (.15 + .9 * gx) * (gx > 0)) d.g = rnd(.12, .45);
+    if (d.g > 0) {
+      d.g -= dt;
+      snap = ((t * 18 | 0) + i * 7) % 3 ? rnd(6, 16) : 0; jit = Math.random() < .35 ? rnd(-30, 30) : 0; alpha = Math.random() < .25 ? .25 : 1;
+    } else if (burst > .3 && i % 3 === 0) snap = 8;
+    return { p: [d.x + Math.sin(d.sw) * .25, d.y, d.z], q: d.q, s: d.s * SET.sz * fitK(), snap, jit, alpha };
+  }).sort((a, b) => a.p[2] - b.p[2]);
+  if (gfx) gfx.frame({ items, w: cv.clientWidth, h: cv.clientHeight, dpr: Math.min(2, devicePixelRatio || 1), cam: { z: CAMZ },
+    colours: COL, mode: SET.cm, line: SET.lw, amb: still.matches ? 0 : gx, burst, time: t });
   requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
+F.create(cv, '../media/flower/flower-head.bin').then(r => {
+  if (!r) { $('.note').textContent = 'WebGL2 is not available in this browser.'; return; }
+  gfx = r; R = r.radius; requestAnimationFrame(frame);
+});
 })();
 </script>
 </body>
