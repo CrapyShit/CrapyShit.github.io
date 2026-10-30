@@ -2087,11 +2087,25 @@ const lore = (() => {
      A rotate manipulator's three rings in the HUD tile's order and colours (Y outside, X, Z inside: rotate order zxy) turn a tape cube.
      X goes to 90 degrees and the Z ring lands on the Y ring: gimbal lock. Y and Z then spin hard, the same amount, and the cube does not move.
      The rings fold into the three great circles of a unit sphere: the pure quaternions, seen in stereographic projection from -1,
-     with 1 at the centre and -1 at infinity. Multiplying by q = cos θ + i sin θ pushes 1 out along the i line, turns the j-k ring,
-     swings the sphere through infinity (a flat plane at θ = 90°) and brings it back at θ = 180°, where q = -1: the same rotation.
-     The sphere then flattens onto the floor rings and the figure scans in. */
-  const Q_END = 10.2, QBEAT = [0, 2.1, 3.9, 5.7, 8.1], Q_RAD = [1, .86, .72];
+     with 1 at the centre and -1 at infinity. Multiplying by q = cos θ + i sin θ pushes 1 out along the i line, turns the j-k ring
+     and swings the sphere slowly through infinity (a flat plane at θ = 90°) and back at θ = 180°, where q = -1: the same rotation.
+     A second turn stops on the plane (θ = 270°) while the whole scene turns to look straight down the i line, so the plane ends flat
+     on the screen: the j-k ring is a circle and the other two rings are a cross through it. The cross lines slide out onto the page's
+     own rules and become them, the circle flies into the gimbal tile, and the figure scans in. */
+  const Q_END = 13.8, QBEAT = [0, 2.1, 3.9, 5.7, 11.9], Q_RAD = [1, .86, .72], Q_FLAT = 11.9;
   const rz = (v, a) => { const c = Math.cos(a), s = Math.sin(a); return [v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2]]; };
+  /* θ over time: slow through the plane at 90°, a rest at 180°, then a second turn that eases onto the plane at 270° */
+  const QK = [[5.8, 0], [7.1, Math.PI / 2 - .42], [8.7, Math.PI / 2 + .42], [9.7, Math.PI], [10, Math.PI], [10.9, Math.PI + .9], [Q_FLAT, Math.PI * 1.5]];
+  const QKM = QK.map((k, i) => (i < QK.length - 1 ? (QK[i + 1][1] - k[1]) / (QK[i + 1][0] - k[0]) : 0));
+  const QKT = QK.map((k, i) => (i === 0 || i === QK.length - 1 || QKM[i - 1] * QKM[i] <= 0 ? 0 : 2 * QKM[i - 1] * QKM[i] / (QKM[i - 1] + QKM[i])));
+  function qtheta(t) {
+    const n = QK.length - 1;
+    if (t <= QK[0][0]) return 0;
+    if (t >= QK[n][0]) return QK[n][1];
+    let i = 0; while (t > QK[i + 1][0]) i++;
+    const h = QK[i + 1][0] - QK[i][0], u = (t - QK[i][0]) / h, u2 = u * u, u3 = u2 * u;
+    return (2 * u3 - 3 * u2 + 1) * QK[i][1] + (u3 - 2 * u2 + u) * h * QKT[i] + (3 * u2 - 2 * u3) * QK[i + 1][1] + (u3 - u2) * h * QKT[i + 1];
+  }
   const QV = { x: 0, y: 0, R: 1, ca: 1, sa: 0, cp: 1, sp: 0, per: 0 };
   const qview = (x, y, R, yaw, pit, per) => ({ x, y, R, ca: Math.cos(yaw), sa: Math.sin(yaw), cp: Math.cos(pit), sp: Math.sin(pit), per });
   const qp = (v, V = QV) => {                                              // sphere space to screen: yaw, pitch, a touch of perspective
@@ -2134,7 +2148,7 @@ const lore = (() => {
       g.globalAlpha = L.al * (front ? 1 : .28); g.strokeStyle = L.col; g.lineWidth = L.w; g.beginPath();
       for (let i = 1; i < L.pts.length; i++) {
         const a = L.pts[i - 1], b = L.pts[i];
-        if (!a || !b || (a[2] + b[2] > 0) !== front || (!L.long && Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) > QV.R * 1.6)) continue;
+        if (!a || !b || (a[2] + b[2] > -.004) !== front || (!L.long && Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) > QV.R * 1.6)) continue;
         g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
       }
       g.stroke();
@@ -2159,34 +2173,34 @@ const lore = (() => {
     if (label) text(label, p[0] + 9, p[1] - 9, col, g.globalAlpha, 'left', 13);
   }
   const qdeg = a => { let d = a * 180 / Math.PI % 360; if (d > 180) d -= 360; if (d < -180) d += 360; return (d < 0 ? '-' : '+') + Math.abs(d).toFixed(1).padStart(5, '0'); };
+  function qrules() {                                                     // the page's own grid lines on this canvas: columns of the reveal row, header and row edges
+    if (!wide.matches) return null;
+    const c = cv.getBoundingClientRect(), r = reveal.getBoundingClientRect(), hd = hdr.getBoundingClientRect(), sp = document.querySelector('.strip');
+    const v = [0, .25, .5, .75, 1].map(k => r.left - c.left + (r.right - r.left) * k);
+    const h = [hd.bottom, r.top, sp ? sp.getBoundingClientRect().top : -1].map(y => y - c.top).filter(y => y > 0 && y < ch);
+    return { v, h };
+  }
   function gimbalIntro(G, t) {
-    const wa = st(8.7, 10, t);
-    fadeWorld(G, t + 14, wa);
+    fadeWorld(G, t + 14, st(12.4, 13.6, t));
     if (t >= Q_END) return 1;
-    const k5 = eio(st(8.1, 8.85, t)), A = st(-.35, .05, t);
-    const R0 = Math.min(G.S * .46, cw * .34);
-    /* the view: an orbit around the gimbal; at the end the sphere collapses into the figure's chest */
-    Object.assign(QV, qview(G.A[0], G.A[1], R0 * (1 - k5), -.55 + .1 * t, .42, .14));
-    const e = qeul(Math.min(t, 3.9)), fold = eio(st(3.9, 4.65, t)), flat = k5, tile = t > 7.9 ? qtile() : null;
-    const back = [], front = [], lines = [];
+    const A = st(-.35, .05, t), R0 = Math.min(G.S * .46, cw * .34);
+    /* the view: an orbit around the gimbal; the second turn swings it round to look straight down the i line (yaw 90°, no tilt, flat) */
+    const orb = -.55 + .1 * t, face = eio(st(10, Q_FLAT, t));
+    Object.assign(QV, qview(G.A[0], G.A[1], R0, mix(orb, Math.PI / 2, face), mix(.42, 0, face), mix(.14, 0, face)));
+    const e = qeul(Math.min(t, 3.9)), fold = eio(st(3.9, 4.65, t)), tile = t > 11.8 ? qtile() : null;
+    const lines = [], merge = st(Q_FLAT, 12.4, t);                           // merge: the plane's grid gives way to the cross and the page
     const lock = st(2.62, 2.75, t) * (1 - st(3.75, 3.95, t)), flick = t < 1 && (t * 20 | 0) % 3 === 0 ? .35 : 1;
+    const th = qtheta(t), qc = Math.cos(th), qs = Math.sin(th), turned = t > 5.8;
+    const Q = v => (turned ? qmulL(qc, qs, v) : v);
 
     /* beats 1-3: the three rings, Y (world axis), X (after Y), Z (after Y and X); then each folds to its axis' great circle */
     const ax = [[0, 1, 0], ry([1, 0, 0], e[0]), qrotE([e[0], e[1], 0], [0, 0, 1])], goal = [[0, 1, 0], [1, 0, 0], [0, 0, 1]], col = [C.Y, C.R, C.L];
-    const thetaK = eio(st(5.85, 7.7, t)), th = Math.PI * thetaK, qc = Math.cos(th), qs = Math.sin(th);
-    const squash = v => v;
     ax.forEach((n, i) => {
-      let nn = unit([mix(n[0], goal[i][0], fold), mix(n[1], goal[i][1], fold), mix(n[2], goal[i][2], fold)]), r = mix(Q_RAD[i], 1, fold), V = QV, al = A * flick;
-      /* the end: each ring leaves the sphere and flies into the gimbal tile, taking that ring's place there (it slips behind the tile) */
-      const kt = tile ? eio(st(8.1 + i * .1, 8.95 + i * .1, t)) : 0;
-      if (tile) {
-        const tn = tile.N[i], sg = Math.sign(tn[0] * nn[0] + tn[1] * nn[1] + tn[2] * nn[2]) || 1;
-        nn = unit([mix(nn[0], tn[0] * sg, kt), mix(nn[1], tn[1] * sg, kt), mix(nn[2], tn[2] * sg, kt)]); r = mix(r, tile.rad[i], kt);
-        V = qmixV(qview(G.A[0], G.A[1], R0, -.55 + .1 * t, .42, .14), tile.V, kt);
-      } else al *= 1 - flat;
-      let pts = qcirc(nn, r, 120, st(.05 + i * .17, .75 + i * .17, t));
-      if (t > 5.8 && t < 8.1) pts = pts.map(v => qmulL(qc, qs, v));      // beat 4: the rings move with the sphere (back where they were at θ = 180°)
-      lines.push({ pts: pts.map(v => (v ? qp(v, V) : null)), col: col[i], al: al * (kt >= 1 ? 0 : 1), w: i ? 2 : 2.4 });
+      const nn = unit([mix(n[0], goal[i][0], fold), mix(n[1], goal[i][1], fold), mix(n[2], goal[i][2], fold)]), r = mix(Q_RAD[i], 1, fold);
+      const pts = qcirc(nn, r, 240, st(.05 + i * .17, .75 + i * .17, t)).map(Q);
+      /* on the plane the j-k ring (red) stays a circle and is drawn on its own below; Y and Z are the cross, handed to the full-length lines */
+      const al = A * flick * (i === 1 ? (t < Q_FLAT ? 1 : 0) : 1 - st(Q_FLAT, Q_FLAT + .25, t));
+      lines.push({ pts: pts.map(v => (v ? qp(v) : null)), col: col[i], al, w: i ? 2 : 2.4 });
       if (lock > 0 && i !== 1) {                                           // the two rings that became one: a split edge
         const o = (i ? 1 : -1) * 3 * lock * ((t * 16 | 0) % 2 ? 1 : .4);
         lines.push({ pts: pts.map(v => { if (!v) return null; const p = qp(v); return [p[0] + o, p[1], p[2]]; }), col: i ? C.glB : C.glA, al: A * lock * .7, w: 1.2 });
@@ -2200,16 +2214,15 @@ const lore = (() => {
 
     /* beats 3-4: the sphere of pure quaternions, built from the south pole up, then pushed around by q */
     const build = st(4.25, 5.35, t), top = -Math.PI / 2 + Math.PI * build;
-    if (build > 0 && flat < 1) QGRID.forEach(L => {
+    if (build > 0 && merge < 1) QGRID.forEach(L => {
       let pts = L.pts;
       if (L.lat) { if (L.la > top) return; }
       else pts = pts.filter((v, i) => -Math.PI / 2 + i / 96 * Math.PI <= top);
-      if (t > 5.8) pts = pts.map(v => qmulL(qc, qs, v));
-      lines.push({ pts: pts.map(v => (v ? qp(squash(v)) : null)), col: C.ink2, al: A * .55 * (1 - flat), w: 1 });
+      lines.push({ pts: pts.map(Q).map(v => (v ? qp(v) : null)), col: C.ink2, al: A * .55 * (1 - merge), w: 1 });
     });
     if (build > 0 && build < 1) lines.push({ pts: qcirc([0, 1, 0], Math.cos(top), 64).map(v => qp([v[0], Math.sin(top), v[2]])), col: C.acc, al: A, w: 2 });
-    if (t > 4.7 && flat < 1) {                                             // the i line: the circle through 1, i, -1 and -i, straight because it runs through -1
-      const a = st(4.7, 5.2, t) * A * (1 - flat);
+    if (t > 4.7 && t < 10.6) {                                             // the i line: the circle through 1, i, -1 and -i, straight because it runs through -1
+      const a = st(4.7, 5.2, t) * A * (1 - st(10, 10.6, t));                 // (it turns end-on to us in the second turn)
       lines.push({ pts: [qp([-6, 0, 0]), qp([0, 0, 0]), qp([6, 0, 0])].map(p => [p[0], p[1], .001]), col: C.R, al: a * .5, w: 1, long: true });
     }
     qstroke(lines, false);
@@ -2227,10 +2240,9 @@ const lore = (() => {
     qstroke(lines, true);
 
     /* the named points: 1 at the centre, i, j, k on the sphere; in beat 4 they ride along with q */
-    const ptAl = A * st(4.4, 4.9, t) * (1 - flat), mv = v => (t > 5.8 ? qmulL(qc, qs, v) : v);
-    const one = t > 5.8 ? (qs / (1 + qc) < 5 ? [qs / (1 + qc), 0, 0] : null) : [0, 0, 0];   // q·1 = q, at tan(θ/2) on the i line
-    qmark(one, C.acc, t > 5.8 ? 'q' : '1', ptAl, true);
-    qmark(mv([1, 0, 0]), C.R, 'i', ptAl); qmark(mv([0, 1, 0]), C.Y, 'j', ptAl); qmark(mv([0, 0, 1]), C.L, 'k', ptAl);
+    const ptAl = A * st(4.4, 4.9, t) * (1 - merge), q1 = qs / (1 + qc);
+    qmark(turned ? (Math.abs(q1) < 5 ? [q1, 0, 0] : null) : [0, 0, 0], C.acc, turned ? 'q' : '1', ptAl, true);   // q·1 = q, at tan(θ/2) on the i line
+    qmark(Q([1, 0, 0]), C.R, 'i', ptAl); qmark(Q([0, 1, 0]), C.Y, 'j', ptAl); qmark(Q([0, 0, 1]), C.L, 'k', ptAl);
     if (G.B > 230 && t > 4.9 && t < 5.9) {                                 // -1 is not on screen: it is the point at infinity
       const p = qp([1.05, 0, 0]);
       callout(p, 30, 26, ['-1', 'AT INFINITY'], A * st(4.9, 5.2, t) * (1 - st(5.6, 5.9, t)));
@@ -2254,9 +2266,36 @@ const lore = (() => {
       brackets(p, r, C.acc, A * lock * ((t * 14 | 0) % 2 && t < 2.95 ? .35 : 1), 1.6);
     }
 
+    /* flat on the screen: the cross (Y ring green, upright; Z ring blue, level) slides out and lands on the page's own rules */
+    if (t >= Q_FLAT - .3 && t < 13.2) {
+      const cx = G.A[0], cy = G.A[1], rules = qrules(), lineAt = (x0, y0, x1, y1, c, a, w) => { g.globalAlpha = a; g.strokeStyle = c; g.lineWidth = w; seg([x0, y0], [x1, y1]); };
+      const into = st(Q_FLAT - .3, Q_FLAT, t);                             // full length, faded in over the projected rings as they reach infinity
+      const go = (base, to, n) => { const d = Math.abs(to - base), k = eio(st(12.05 + n * .05 + d / 3000, 12.6 + n * .05 + d / 3000, t)); return [mix(base, to, k), k]; };
+      const vt = rules ? rules.v : [cx], hz = rules ? rules.h : [cy];
+      vt.forEach((xv, n) => {
+        const [x, k] = go(cx, xv, n), a = A * into * (rules ? 1 - st(.85, 1, k) * st(12.7, 13.1, t) : 1 - st(12.1, 12.6, t));
+        if (a > .01) { lineAt(x, 0, x, ch, C.Y, a * (1 - k * .6), 2); if (k > .9) lineAt(x, 0, x, ch, C.acc, a * (k - .9) * 10 * (1 - st(12.75, 13, t)), 2); }
+      });
+      hz.forEach((yh, n) => {
+        const [y, k] = go(cy, yh, n + 2), a = A * into * (rules ? 1 - st(.85, 1, k) * st(12.7, 13.1, t) : 1 - st(12.1, 12.6, t));
+        if (a > .01) { lineAt(0, y, cw, y, C.L, a * (1 - k * .6), 2); if (k > .9) lineAt(0, y, cw, y, C.acc, a * (k - .9) * 10 * (1 - st(12.75, 13, t)), 2); }
+      });
+    }
+    /* ...and the j-k ring, a plain circle now, flies into the gimbal tile (or folds into the figure where there is no tile) */
+    if (t >= Q_FLAT) {
+      const kt = eio(st(12.1, 12.85, t)), base = qview(G.A[0], G.A[1], R0, Math.PI / 2, 0, 0);
+      let V = base, nn = [1, 0, 0], r = 1, al = A;
+      if (tile) {
+        const tn = tile.N[1], sg = Math.sign(tn[0]) || 1;
+        nn = unit([mix(1, tn[0] * sg, kt), mix(0, tn[1] * sg, kt), mix(0, tn[2] * sg, kt)]); r = mix(1, tile.rad[1], kt); V = qmixV(base, tile.V, kt);
+        if (kt >= 1) al = 0;
+      } else { r = 1 - kt; al *= 1 - st(.8, 1, kt); }
+      if (al > 0) { const pts = qcirc(nn, r, 160).map(v => { const p = qp(v, V); return [p[0], p[1], 1]; }); qstroke([{ pts, col: C.R, al, w: 2 }], true); }
+    }
+
     /* the read-out, beside the sphere */
     if (G.B > 230) {
-      const ra = A * st(.6, 1, t) * (1 - st(8.1, 8.5, t));
+      const ra = A * st(.6, 1, t) * (1 - st(Q_FLAT, Q_FLAT + .35, t));
       let x = QV.x + R0 * 1.16 + 12, al = 'left';
       if (x + 140 > cw) { x = QV.x - R0 * 1.16 - 12; al = 'right'; }
       const y = QV.y - R0 * .78, L = (i, s, c, a = 1) => text(s, x, y + i * 15, c, ra * a, al);
@@ -2271,20 +2310,26 @@ const lore = (() => {
       } else {
         L(0, 'q = cosθ + i sinθ', C.ink); L(1, 'θ ' + qdeg(th), C.acc);
         L(2, 'w ' + (qc < 0 ? '-' : '+') + Math.abs(qc).toFixed(3) + '  x ' + (qs < 0 ? '-' : '+') + Math.abs(qs).toFixed(3), C.ink2);
-        L(4, 'q·p: RING TURNS', C.ink2, st(6.2, 6.6, t)); L(5, '1 SLIDES OUT', C.ink2, st(6.4, 6.8, t));
-        L(7, 'q = -1', C.acc, st(7.55, 7.75, t)); L(8, 'SAME ROTATION', C.acc, st(7.6, 7.8, t));
+        if (t < 10) {
+          L(4, 'q·p: RING TURNS', C.ink2, st(6.2, 6.6, t)); L(5, '1 SLIDES OUT', C.ink2, st(6.4, 6.8, t));
+          L(6, 'θ 90°  SPHERE = PLANE', C.ink, st(7.4, 7.7, t) * (1 - st(8.6, 8.9, t)));
+          L(7, 'q = -1', C.acc, st(9.4, 9.6, t)); L(8, 'SAME ROTATION', C.acc, st(9.45, 9.65, t));
+        } else {
+          L(4, 'AGAIN, LOOKING', C.ink2, st(10.1, 10.4, t)); L(5, 'DOWN THE i LINE', C.ink2, st(10.2, 10.5, t));
+          L(7, 'q = -i', C.acc, st(11.4, 11.7, t)); L(8, 'PLANE = SCREEN', C.acc, st(11.5, 11.8, t));
+        }
       }
     }
 
-    /* the sphere gone into the figure: a flash of corner marks, and the scan starts */
-    if (t > 8.7) {
+    /* the circle gone: a flash of corner marks on the figure, and the scan starts */
+    if (t > 12.5) {
       for (let n = 0; n < 3; n++) {
-        const u = (t - 8.7 - n * .14) / .7; if (u < 0 || u >= 1) continue;
+        const u = (t - 12.5 - n * .14) / .7; if (u < 0 || u >= 1) continue;
         brackets(G.A, R0 * (.08 + eo(u) * 1.3), n === 1 ? C.ink : C.acc, Math.pow(1 - u, 1.5), 1.6);
       }
     }
-    tear(t - 3.72 + 10.42); tear(t - 8.95 + 10.42);
-    return cl((t - 8.95) / .9);
+    tear(t - 3.72 + 10.42); tear(t - 12.75 + 10.42);
+    return cl((t - 12.75) / .9);
   }
   const endT = () => (mode === 'vault' ? V_END : mode === 'bloom' ? B_END : mode === 'gimbal' ? Q_END : END_T);
   const clock_t = () => (mode === 'origin' ? story(clock) : clock);
