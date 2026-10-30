@@ -676,7 +676,7 @@ const SITE = {
     controls: { dark: 'media/stage/oni_dark_controls.webm', light: 'media/stage/oni_light_controls.webm' },
     reel: 'https://youtu.be/6N0kjsM0SSk' },   // reel: a YouTube link or a video file
   intro: 'always', // the intro behind the home page: 'always' plays on every load, 'once' once per browser, 'off' never
-  intros: ['origin', 'vault', 'bloom', 'gimbal'],   // intros to pick from at random on each load (never the same one twice in a row)
+  intros: ['origin', 'vault', 'bloom', 'gimbal', 'matrix'],   // intros to pick from at random on each load (never the same one twice in a row)
   cast: 'Proto',   // the character the origin assembles: shown on the rack label and in the last caption
   cv: '',          // path to your CV PDF
   emptyTiles: 0    // the Work page pads its grid with empty slots up to this many tiles; set to 0 once it is full
@@ -745,6 +745,7 @@ const T = {
     'vault.1': 'Archive', 'vault.2': 'Searching', 'vault.3': 'Match', 'vault.4': 'Release', 'vault.5': '{cast} online',
     'bloom.1': 'Signal', 'bloom.2': 'Rain', 'bloom.3': 'Notice', 'bloom.4': 'Chosen', 'bloom.5': '{cast} online',
     'gimbal.1': 'Three rings', 'gimbal.2': 'Gimbal lock', 'gimbal.3': 'Four dimensions', 'gimbal.4': 'One rotation', 'gimbal.5': '{cast} online',
+    'matrix.1': 'Basis', 'matrix.2': 'Order matters', 'matrix.3': 'Determinant', 'matrix.4': 'Hierarchy', 'matrix.5': '{cast} online',
     'side.slot': 'Detail loop slot, 1:1', 'side.works': 'Works in',
     'inside.lede': 'Scroll to take the character apart, in the order a rig is built.',
     's1': 'Shaded', 's2': 'Wireframe', 's3': 'Skeleton', 's4': 'Controls',
@@ -782,6 +783,7 @@ const T = {
     'vault.1': 'アーカイブ', 'vault.2': '検索中', 'vault.3': '一致', 'vault.4': '解放', 'vault.5': '{cast} 起動',
     'bloom.1': '信号', 'bloom.2': '雨', 'bloom.3': '気づき', 'bloom.4': '選ばれた一輪', 'bloom.5': '{cast} 起動',
     'gimbal.1': '三つの輪', 'gimbal.2': 'ジンバルロック', 'gimbal.3': '四次元', 'gimbal.4': 'ひとつの回転', 'gimbal.5': '{cast} 起動',
+    'matrix.1': '基底', 'matrix.2': '順序', 'matrix.3': '行列式', 'matrix.4': '階層', 'matrix.5': '{cast} 起動',
     'side.slot': 'ディテールループ枠 1:1', 'side.works': '使用ツール',
     'inside.lede': 'スクロールすると、リグを組む順番でキャラクターが分解されていきます。',
     's1': 'シェーディング', 's2': 'ワイヤーフレーム', 's3': 'スケルトン', 's4': 'コントローラー',
@@ -1959,7 +1961,7 @@ const lore = (() => {
   }
 
   /* ----- placing, timing, drawing ----- */
-  const RUN = { origin: 1, vault: 1, bloom: 1, gimbal: 1 }, LIST = (SITE.intros || ['origin']).filter(n => RUN[n]);
+  const RUN = { origin: 1, vault: 1, bloom: 1, gimbal: 1, matrix: 1 }, LIST = (SITE.intros || ['origin']).filter(n => RUN[n]);
   if (!LIST.length) LIST.push('origin');
   function pick() {                                                       // a random intro, never the one shown last time
     const prev = store.get('intro-last'), pool = LIST.length > 1 ? LIST.filter(n => n !== prev) : LIST, m = pool[Math.random() * pool.length | 0];
@@ -2391,7 +2393,180 @@ const lore = (() => {
     tear(t - 3.72 + 10.42); tear(t - 12.75 + 10.42);
     return cl((t - 12.75) / .9);
   }
-  const endT = () => (mode === 'vault' ? V_END : mode === 'bloom' ? B_END : mode === 'gimbal' ? Q_END : END_T);
+  /* ===== intro 5: matrix =====
+     Linear algebra first, then the rig. A grid and its two basis vectors, X red and Y green: the matrix's columns are where they land,
+     and every grid line follows. Shear then rotate, against rotate then shear: the order changes the result (S·R ≠ R·S).
+     The unit square's area is the determinant: it stretches, the eigenvector lines only scale, it squashes flat (det 0) and flips (det < 0).
+     Then the figure's skeleton is built joint by joint, each joint's axes carried out from its parent (world = parent · local), with the
+     4x4 world matrix of the arm chain in the read-out. Last, the grid straightens, scales to the page's column width and lands on the
+     page's own lines, and the figure scans in. */
+  const M_END = 13.8, MBEAT = [0, 2.4, 4.8, 7.2, 10.8];
+  const mI = [1, 0, 0, 1], mS = [1, .8, 0, 1], mA = [1.6, .6, .6, .9], mZ = [1.6, .6, .8, .3], mF = [1.6, .6, 1, -.25];
+  const mRot = a => [Math.cos(a), -Math.sin(a), Math.sin(a), Math.cos(a)];
+  const mLerp = (A, B, k) => A.map((v, i) => mix(v, B[i], k));
+  const mMul = (A, B) => [A[0] * B[0] + A[1] * B[2], A[0] * B[1] + A[1] * B[3], A[2] * B[0] + A[3] * B[2], A[2] * B[1] + A[3] * B[3]];
+  const M_TH = 1.05, mSR = mMul(mS, mRot(M_TH)), mRS = mMul(mRot(M_TH), mS);
+  function mat2(t) {                                                       // [a b; c d], row by row: columns (a, c) and (b, d) are where X and Y land
+    if (t < 2.45) return mLerp(mI, mS, eio(st(.9, 1.5, t)) - eio(st(2.0, 2.4, t)));
+    if (t < 3.6) return mMul(mLerp(mI, mS, eio(st(3.05, 3.55, t))), mRot(M_TH * eio(st(2.5, 3.0, t))));   // R first, then S on top: S·R
+    if (t < 3.88) return mLerp(mSR, mI, eio(st(3.6, 3.85, t)));
+    if (t < 4.85) return mMul(mRot(M_TH * eio(st(4.3, 4.75, t))), mLerp(mI, mS, eio(st(3.9, 4.25, t))));   // S first, then R: R·S
+    if (t < 5.95) return mLerp(mRS, mA, eio(st(4.9, 5.4, t)));
+    if (t < 6.5) return mLerp(mA, mZ, eio(st(5.95, 6.45, t)));
+    if (t < 7.0) return mLerp(mZ, mF, eio(st(6.5, 6.95, t)));
+    return mLerp(mF, mI, eio(st(7.05, 7.5, t)));
+  }
+  /* the skeleton: parents, depth and each joint's axes (X down the bone, as on the skeleton view) */
+  const MPAR = {}, MKID = {}, MDEP = { hip: 0 };
+  BN.forEach(([a, b]) => { MPAR[b] = a; (MKID[a] = MKID[a] || []).push(b); });
+  const mDep = j => (MDEP[j] != null ? MDEP[j] : (MDEP[j] = mDep(MPAR[j]) + 1));
+  const MJ = Object.keys(JN).filter(j => j === 'hip' || MPAR[j]), MAX = {};
+  MJ.forEach(j => {
+    const k = MKID[j] ? MKID[j][0] : null, x = k ? unit(sub(JN[k], JN[j])) : unit(sub(JN[j], JN[MPAR[j]])), up = Math.abs(x[2]) < .9 ? [0, 0, 1] : [1, 0, 0], y = unit(cross(up, x));
+    MAX[j] = [x, y, cross(x, y)]; mDep(j);
+  });
+  const MARM = ['hip', 'sp1', 'sp2', 'chest', 'shL', 'elL', 'wrL', 'haL'];
+  const MNAME = { hip: 'HIP', sp1: 'SPINE_1', sp2: 'SPINE_2', chest: 'CHEST', shL: 'SHOULDER_L', elL: 'ELBOW_L', wrL: 'WRIST_L', haL: 'HAND_L' };
+  const mT0 = j => 7.45 + MDEP[j] * .33;
+  function mJoint(j, t, memo) {                                            // [position, axes, how far it has come out of its parent]
+    if (memo[j]) return memo[j];
+    if (j === 'hip') return (memo[j] = [JN.hip, MAX.hip, eo(st(7.3, 7.6, t))]);
+    const u = eio(cl((t - mT0(j)) / .33)), P = mJoint(MPAR[j], t, memo);
+    if (u <= 0) return (memo[j] = [P[0], P[1], 0]);
+    return (memo[j] = [JN[j].map((c, n) => mix(P[0][n], c, u)), MAX[j].map((v, i) => unit(v.map((c, n) => mix(P[1][i][n], c, u)))), u]);
+  }
+  const sproj = (G, v) => { const e = ry(v, G.th); return [G.ox + e[0] * G.S, G.oy - (e[1] * CP - e[2] * SP) * G.S]; };   // the stage's own camera
+  function marrow(a, b, col, al, w = 2.4) {
+    const ang = Math.atan2(b[1] - a[1], b[0] - a[0]), h = 9;
+    g.globalAlpha = al; g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w; seg(a, [b[0] - Math.cos(ang) * h * .6, b[1] - Math.sin(ang) * h * .6]);
+    poly([b, [b[0] - Math.cos(ang - .4) * h, b[1] - Math.sin(ang - .4) * h], [b[0] - Math.cos(ang + .4) * h, b[1] - Math.sin(ang + .4) * h]]); g.fill();
+  }
+  function mhud(x, y, rows, cols, al, title, sub, sub2) {                  // a bracketed matrix, one colour per column
+    if (al <= .01) return;
+    const n = rows.length, m = rows[0].length, cwd = 46, h = 15, w = m * cwd + 8;
+    g.globalAlpha = al * .82; g.fillStyle = C.ground; g.fillRect(x - 10, y - 26, w + 20, n * h + 34 + (sub ? 15 : 0) + (sub2 ? 15 : 0));
+    text(title, x, y - 14, C.ink, al);
+    rows.forEach((r, i) => r.forEach((v, k) => text((v < -.005 ? '-' : ' ') + Math.abs(v).toFixed(2), x + 6 + k * cwd, y + 6 + i * h, cols[k], al)));
+    g.globalAlpha = al; g.strokeStyle = C.ink2; g.lineWidth = 1; g.beginPath();
+    [[x, 1], [x + w, -1]].forEach(([bx, d]) => { g.moveTo(bx + d * 4, y - 3); g.lineTo(bx, y - 3); g.lineTo(bx, y + n * h - 1); g.lineTo(bx + d * 4, y + n * h - 1); });
+    g.stroke();
+    if (sub) text(sub, x, y + n * h + 12, C.acc, al);
+    if (sub2) text(sub2, x, y + n * h + 27, C.ink2, al);
+  }
+  function matrixIntro(G, t) {
+    fadeWorld(G, t + 14, st(12.4, 13.6, t));
+    if (t >= M_END) return 1;
+    const A = st(-.35, .05, t), R0 = Math.min(G.S * .46, cw * .34), u0 = R0 * .5, O = G.A, M = mat2(t), det = M[0] * M[3] - M[1] * M[2];
+    const N = Math.ceil(Math.max(cw, ch) / u0) + 2;
+    const sc = (x, y, MM = M, OO = O, uu = u0) => [OO[0] + uu * (MM[0] * x + MM[1] * y), OO[1] - uu * (MM[2] * x + MM[3] * y)];
+    const flick = t < .8 && (t * 20 | 0) % 3 === 0 ? .35 : 1, rules = t > 10.4 ? qrules() : null;
+
+    /* beats 1-4: the plain grid behind, the transformed grid on top; it dims while the skeleton is built */
+    if (t < 11) {
+      const ga = A * flick * st(0, .5, t) * mix(1, .35, st(7.2, 7.7, t) * (1 - st(10.5, 10.95, t))), lim = N * st(0, .7, t);
+      g.lineWidth = 1;
+      for (let k = -N; k <= N; k++) {
+        if (Math.abs(k) > lim) continue;
+        g.globalAlpha = ga * .45; g.strokeStyle = C.line; seg(sc(k, -N, mI), sc(k, N, mI)); seg(sc(-N, k, mI), sc(N, k, mI));
+        g.globalAlpha = ga * (k ? .55 : .9); g.strokeStyle = k ? C.ink2 : C.ink; g.lineWidth = k ? 1 : 1.4;
+        seg(sc(k, -N), sc(k, N)); seg(sc(-N, k), sc(N, k)); g.lineWidth = 1;
+      }
+    }
+
+    /* the unit square (its area is the determinant), the ghosts of S·R and R·S, the eigenvector lines, the two basis vectors */
+    const va = A * st(.35, .75, t) * (1 - st(7.1, 7.5, t));
+    if (va > 0) {
+      const ghost = (MM, lab, a) => {
+        if (a <= 0) return;
+        poly([sc(0, 0, MM), sc(1, 0, MM), sc(1, 1, MM), sc(0, 1, MM)]); g.globalAlpha = a; g.strokeStyle = C.ink2; g.setLineDash([4, 4]); g.lineWidth = 1.2; g.stroke(); g.setLineDash([]);
+        const c = sc(.5, .5, MM); text(lab, c[0], c[1], C.ink, a, 'center', 12);
+      };
+      ghost(mSR, 'S·R', va * st(3.55, 3.7, t) * (1 - st(4.9, 5.25, t)));
+      ghost(mRS, 'R·S', va * st(4.72, 4.8, t) * (1 - st(4.9, 5.25, t)));
+      poly([sc(0, 0), sc(1, 0), sc(1, 1), sc(0, 1)]);
+      g.globalAlpha = va * .2; g.fillStyle = det < 0 ? C.glA : C.acc; g.fill(); g.globalAlpha = va; g.strokeStyle = det < 0 ? C.glA : C.acc; g.lineWidth = 1.5; g.stroke();
+      if (t > 4.85 && t < 7.1) { const c = sc(.5, .5); text((det < 0 ? '-' : '') + Math.abs(det).toFixed(2), c[0], c[1], C.ink, va * st(4.9, 5.2, t), 'center', 12); }
+      const ea = va * st(5.3, 5.5, t) * (1 - st(5.9, 6.1, t));             // eigenvectors: lines the matrix only stretches
+      if (ea > 0) {
+        const tr = M[0] + M[3], disc = tr * tr - 4 * det;
+        if (disc >= 0) [1, -1].forEach(sg => {
+          const l = (tr + sg * Math.sqrt(disc)) / 2, v = unit(Math.abs(M[1]) > 1e-4 ? [M[1], l - M[0], 0] : [1, 0, 0]);
+          g.globalAlpha = ea * .7; g.strokeStyle = C.M; g.lineWidth = 1.2; g.setLineDash([6, 5]); seg(sc(-N * v[0], -N * v[1], mI), sc(N * v[0], N * v[1], mI)); g.setLineDash([]);
+          const tip = sc(v[0] * l, v[1] * l, mI); marrow(sc(0, 0, mI), tip, C.M, ea, 2); text('λ ' + l.toFixed(2), tip[0] + 10, tip[1] - 10, C.M, ea);
+        });
+      }
+      const o = sc(0, 0), X = sc(1, 0), Y = sc(0, 1);
+      marrow(o, X, C.R, va); marrow(o, Y, C.Y, va);
+      text('X', X[0] + 9, X[1] + 4, C.R, va, 'left', 12); text('Y', Y[0] + 9, Y[1] - 6, C.Y, va, 'left', 12);
+    }
+
+    /* beat 4: the skeleton, each joint carried out of its parent with its axes, landing with a ring */
+    const memo = {}, ska = A * st(7.25, 7.5, t) * (1 - st(12.8, 13.4, t));
+    if (ska > 0) {
+      const J = MJ.map(j => [j, mJoint(j, t, memo)]), js = Math.max(3, .016 * G.S);
+      g.lineWidth = 1.4; g.strokeStyle = C.ink;
+      J.forEach(([j, [p, , u]]) => { if (j !== 'hip' && u > 0) { g.globalAlpha = ska; seg(sproj(G, memo[MPAR[j]][0]), sproj(G, p)); } });
+      J.forEach(([j, [p, ax, u]]) => {
+        if (u <= 0) return;
+        const c = sproj(G, p), L = .075 * (j === 'hip' ? u : 1);
+        [[ax[0], C.R], [ax[1], C.Y], [ax[2], C.L]].forEach(([v, col]) => { g.globalAlpha = ska; g.strokeStyle = col; g.lineWidth = 1.6; seg(c, sproj(G, add(p, mul(v, L)))); });
+        g.globalAlpha = ska; g.fillStyle = C.ground; g.strokeStyle = C.ink; g.lineWidth = 1.2; g.fillRect(c[0] - js / 2, c[1] - js / 2, js, js); g.strokeRect(c[0] - js / 2, c[1] - js / 2, js, js);
+        const f = j === 'hip' ? -1 : (t - mT0(j) - .33) / .35;
+        if (f > 0 && f < 1) { g.globalAlpha = ska * (1 - f); g.strokeStyle = C.acc; g.lineWidth = 1.2; oval(c, js + f * 14, js + f * 14); g.stroke(); }
+      });
+      if (t > 10 && t < 11) {                                               // skinning: a pulse runs down every chain
+        const u = (t - 10) / .9;
+        g.fillStyle = C.acc;
+        MJ.forEach(j => { if (j === 'hip') return; const d = MDEP[j] / 8; if (u < d - .125 || u > d) return; const k = (u - d + .125) / .125, p = sproj(G, JN[MPAR[j]].map((c, n) => mix(c, JN[j][n], k))); g.globalAlpha = ska; g.fillRect(p[0] - 3, p[1] - 3, 6, 6); });
+      }
+    }
+
+    /* beat 5: the grid straightens, scales to the page's column width and settles on the page's own lines */
+    if (t >= 11) {
+      const k = eio(st(11, 11.9, t)), c = cv.getBoundingClientRect(), rr = reveal.getBoundingClientRect();
+      const colW = rules ? (rules.v[4] - rules.v[0]) / 4 : u0, top = rules ? rr.top - c.top : O[1], xc = rules ? rules.v[2] : O[0];
+      const OO = [mix(O[0], xc, k), mix(O[1], top, k)], uu = mix(u0, colW, k), NN = Math.ceil(Math.max(cw, ch) / uu) + 2;
+      const base = A * (rules ? 1 : 1 - st(11, 11.8, t)), land = st(12.25, 12.45, t), gone = 1 - st(12.45, 12.95, t);
+      const L = (a, b, al, flash) => { if (al <= .01) return; g.globalAlpha = al; g.strokeStyle = C.ink2; g.lineWidth = 1.2; seg(a, b); if (flash > 0) { g.globalAlpha = al * flash; g.strokeStyle = C.acc; g.lineWidth = 2; seg(a, b); } };
+      const flash = land * (1 - st(12.5, 12.8, t));
+      for (let n = -NN; n <= NN; n++) {                                     // columns: the five that are the page's land on them, the rest fade
+        const keep = rules && Math.abs(n) <= 2, x = OO[0] + n * uu;
+        L([x, 0], [x, ch], base * (keep ? gone : 1 - st(11.6, 12.1, t)) * .8, keep ? flash : 0);
+        const y = OO[1] - n * uu;                                           // rows: only the reveal row's top edge is a page line
+        L([0, y], [cw, y], base * (n === 0 && rules ? gone : 1 - st(11.6, 12.1, t)) * .8, n === 0 ? flash : 0);
+      }
+      if (rules) [[1, rules.h[0]], [-1, rules.h[rules.h.length - 1]]].forEach(([n, yr]) => {   // one row up slides to the header, one down to the strip
+        if (yr == null || Math.abs(yr - top) < 4) return;
+        const y = mix(OO[1] - n * uu, yr, eio(st(11.85, 12.3, t)));
+        L([0, y], [cw, y], base * gone * .8 * st(11.6, 11.85, t), flash);
+      });
+    }
+
+    /* the read-out */
+    if (G.B > 230) {
+      const ra = A * st(.5, .9, t) * (1 - st(10.6, 11, t)), sr = stage.getBoundingClientRect(), x = Math.max(24, sr.left - cv.getBoundingClientRect().left + 22), y = G.A[1] - R0 * .82;
+      const m2 = [[M[0], M[1]], [M[2], M[3]]], cc = [C.R, C.Y];
+      if (t < 2.4) mhud(x, y, m2, cc, ra, 'M = [ X  Y ]', 'COLUMNS = WHERE X, Y LAND');
+      else if (t < 4.85) mhud(x, y, m2, cc, ra, t < 3.88 ? 'S·R   ROTATE, THEN SHEAR' : 'R·S   SHEAR, THEN ROTATE', t > 4.72 ? 'S·R ≠ R·S' : '', 'ORDER MATTERS');
+      else if (t < 7.2) {
+        const eig = t > 5.3 && t < 6.05, flat = Math.abs(det) < .06;
+        mhud(x, y, m2, cc, ra, 'det M = ' + (det < -.005 ? '-' : '') + Math.abs(det).toFixed(2), flat ? 'FLAT: A DIMENSION LOST' : det < 0 ? 'FLIPPED: MIRRORED SPACE' : eig ? 'EIGENVECTORS ONLY STRETCH' : '', 'AREA OF THE UNIT SQUARE');
+      } else {
+        let j = 'hip'; MARM.forEach(n => { if (memo[n] && memo[n][2] > 0) j = n; });
+        const [p, ax] = memo[j] || [JN.hip, MAX.hip];
+        mhud(x, y, [[ax[0][0], ax[1][0], ax[2][0], p[0]], [ax[0][1], ax[1][1], ax[2][1], p[1]], [ax[0][2], ax[1][2], ax[2][2], p[2]], [0, 0, 0, 1]], [C.R, C.Y, C.L, C.ink],
+          ra * st(7.3, 7.6, t), 'W  ' + MNAME[j], t > 10 ? 'SKIN = W · BIND⁻¹' : 'W = W_PARENT · L', 'COLUMNS: X  Y  Z  POSITION');
+      }
+    }
+
+    if (t > 12.4) for (let n = 0; n < 3; n++) {
+      const u = (t - 12.4 - n * .14) / .7; if (u < 0 || u >= 1) continue;
+      brackets(G.A, R0 * (.08 + eo(u) * 1.3), n === 1 ? C.ink : C.acc, Math.pow(1 - u, 1.5), 1.6);
+    }
+    tear(t - 6.55 + 10.42); tear(t - 12.65 + 10.42);
+    return cl((t - 12.6) / .9);
+  }
+  const endT = () => (mode === 'vault' ? V_END : mode === 'bloom' ? B_END : mode === 'gimbal' ? Q_END : mode === 'matrix' ? M_END : END_T);
   const clock_t = () => (mode === 'origin' ? story(clock) : clock);
   /* a layer above the page (under the header) for anything that should come in front of it; cleared each frame it was used */
   const fx = mk('canvas', 'lore-fx'), fg = fx.getContext('2d');
@@ -2417,7 +2592,7 @@ const lore = (() => {
     return { S, ox, oy, y0, cy: oy - .9436 * CP * S, th: fr / 240 * TAU - .55, B: S * 1.2, A: [ox, cl(seen, oy - 1.5 * CP * S, oy - .95 * CP * S)] };
   }
   function caption(t) {
-    const B = mode === 'vault' ? VBEAT : mode === 'bloom' ? BBEAT : mode === 'gimbal' ? QBEAT : BEAT;
+    const B = mode === 'vault' ? VBEAT : mode === 'bloom' ? BBEAT : mode === 'gimbal' ? QBEAT : mode === 'matrix' ? MBEAT : BEAT;
     let i = 0; while (i < 4 && t >= B[i + 1]) i++;
     if (done) i = 5;
     if (i === beat) return;
@@ -2469,7 +2644,7 @@ const lore = (() => {
     const tt = done && mode !== 'origin' ? Math.max(t, endT()) : t;
     if (mode !== 'bloom' && glUsed && FG) { FG.clear(); glUsed = false; }
     const rev = mode === 'vault' ? (done ? (vault(G, tt), 1) : vault(G, tt)) : mode === 'bloom' ? (done ? (bloom(G, tt), 1) : bloom(G, tt))
-      : mode === 'gimbal' ? (done ? (gimbalIntro(G, tt), 1) : gimbalIntro(G, tt)) : origin(G, t);
+      : mode === 'gimbal' ? (done ? (gimbalIntro(G, tt), 1) : gimbalIntro(G, tt)) : mode === 'matrix' ? (done ? (matrixIntro(G, tt), 1) : matrixIntro(G, tt)) : origin(G, t);
     g.restore(); g.globalAlpha = 1;
     fig.style.opacity = figOp < 1 ? figOp.toFixed(3) : '';
     fig.style.clipPath = rev >= 1 ? '' : 'inset(0 0 ' + ((1 - rev) * 100).toFixed(2) + '% 0)';
