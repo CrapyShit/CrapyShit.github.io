@@ -397,6 +397,8 @@ li.soft{justify-content:center}
    .fig wraps the figure layers so the sequence can reveal them with one clip. */
 .lore{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .lore--bg{position:fixed;z-index:-1}
+.lore-fx{position:fixed;inset:0;width:100%;height:100%;z-index:30;pointer-events:none}   /* intro layer above the page, under the header */
+body[data-view="page"] .lore-fx{display:none}
 body[data-view="page"] .lore--bg{display:none}
 .fig{position:absolute;inset:0}
 .stage[data-lore] > .hud:not(.lore-cap),.stage[data-lore] > .ph{visibility:hidden}
@@ -2092,6 +2094,7 @@ const lore = (() => {
      A second turn stops on the plane (θ = 270°) while the whole scene turns to look straight down the i line, so the plane ends flat
      on the screen: the j-k ring is a circle and the other two rings are a cross through it. The cross lines slide out onto the page's
      own rules and become them, the circle flies into the gimbal tile, and the figure scans in. */
+  const Q_CAM = [2.3, .14, .55];   // where the camera ends up: 2.3 back along the i line from the plane, a little above it and to one side
   const Q_END = 13.8, QBEAT = [0, 2.1, 3.9, 5.7, 11.9], Q_RAD = [1, .86, .72], Q_FLAT = 11.9;
   const rz = (v, a) => { const c = Math.cos(a), s = Math.sin(a); return [v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2]]; };
   /* θ over time: slow through the plane at 90°, a rest at 180°, then a second turn that eases onto the plane at 270° */
@@ -2108,7 +2111,16 @@ const lore = (() => {
   }
   const QV = { x: 0, y: 0, R: 1, ca: 1, sa: 0, cp: 1, sp: 0, per: 0 };
   const qview = (x, y, R, yaw, pit, per) => ({ x, y, R, ca: Math.cos(yaw), sa: Math.sin(yaw), cp: Math.cos(pit), sp: Math.sin(pit), per });
-  const qp = (v, V = QV) => {                                              // sphere space to screen: yaw, pitch, a touch of perspective
+  const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  /* The main view is a pinhole camera: eye E, right r, up u, forward f, F pixels per unit at distance 1, principal point (x, y),
+     z0 the distance to the origin. qorbit() is the orbit around the gimbal written as such a camera (the same picture as a yaw,
+     a pitch and a perspective term). Points behind the camera come back null. */
+  function qorbit(x, y, R, yaw, pit, per) {
+    const ca = Math.cos(yaw), sa = Math.sin(yaw), cp = Math.cos(pit), sp = Math.sin(pit), D = 1 / per, b = [-sa * cp, sp, ca * cp];
+    return { E: mul(b, D), r: [ca, 0, sa], u: [sa * sp, cp, -ca * sp], f: mul(b, -1), F: R * D, x, y, z0: D };
+  }
+  const qp = (v, V = QV) => {                                              // sphere space to screen: [x, y, depth (+ = nearer than the origin)]
+    if (V.E) { const d = sub(v, V.E), z = dot3(d, V.f); if (z < .02) return null; return [V.x + V.F * dot3(d, V.r) / z, V.y - V.F * dot3(d, V.u) / z, V.z0 - z]; }
     const x1 = v[0] * V.ca + v[2] * V.sa, z1 = -v[0] * V.sa + v[2] * V.ca, d = v[1] * V.sp + z1 * V.cp, f = 1 / Math.max(.2, 1 - d * V.per);
     return [V.x + x1 * V.R * f, V.y - (v[1] * V.cp - z1 * V.sp) * V.R * f, d];
   };
@@ -2138,9 +2150,18 @@ const lore = (() => {
   for (let m = 0; m < 12; m++) { const lo = m * Math.PI / 6, pts = []; for (let i = 0; i <= 96; i++) { const la = -Math.PI / 2 + i / 96 * Math.PI; pts.push([Math.cos(la) * Math.cos(lo), Math.sin(la), Math.cos(la) * Math.sin(lo)]); } QGRID.push({ pts, lat: 0 }); }
   function qmulL(c, s, v) {                                                // (cos θ + i sin θ)·(xi + yj + zk), stereographically projected from -1
     const w = -s * v[0], d = 1 + w;
-    if (d < .025) return null;
+    if (d < .004) return null;
     const p = [c * v[0] / d, (c * v[1] - s * v[2]) / d, (c * v[2] + s * v[1]) / d];
-    return Math.abs(p[0]) > 5 || Math.abs(p[1]) > 5 || Math.abs(p[2]) > 5 ? null : p;
+    return Math.abs(p[0]) > 40 || Math.abs(p[1]) > 40 || Math.abs(p[2]) > 40 ? null : p;
+  }
+  function qproj(pts) {                                                    // project a 3D polyline; break it where it jumps through infinity
+    const out = []; let prev = null;
+    pts.forEach(v => {
+      if (!v) { out.push(null); prev = null; return; }
+      if (prev && Math.abs(v[0] - prev[0]) + Math.abs(v[1] - prev[1]) + Math.abs(v[2] - prev[2]) > 3) out.push(null);
+      out.push(qp(v)); prev = v;
+    });
+    return out;
   }
   function qstroke(list, front) {                                          // [{ pts (screen, null breaks the line), col, al, w }]: one depth half
     list.forEach(L => {
@@ -2148,7 +2169,7 @@ const lore = (() => {
       g.globalAlpha = L.al * (front ? 1 : .28); g.strokeStyle = L.col; g.lineWidth = L.w; g.beginPath();
       for (let i = 1; i < L.pts.length; i++) {
         const a = L.pts[i - 1], b = L.pts[i];
-        if (!a || !b || (a[2] + b[2] > -.004) !== front || (!L.long && Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) > QV.R * 1.6)) continue;
+        if (!a || !b || (a[2] + b[2] > -.004) !== front) continue;
         g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
       }
       g.stroke();
@@ -2169,6 +2190,7 @@ const lore = (() => {
   function qmark(v, col, label, al, big) {                                 // a point on the sphere with its name
     if (!v || al <= 0) return;
     const p = qp(v), r = big ? 4 : 3;
+    if (!p) return;
     g.globalAlpha = al * (p[2] < -.05 ? .45 : 1); g.fillStyle = col; g.fillRect(p[0] - r, p[1] - r, r * 2, r * 2);
     if (label) text(label, p[0] + 9, p[1] - 9, col, g.globalAlpha, 'left', 13);
   }
@@ -2180,13 +2202,54 @@ const lore = (() => {
     const h = [hd.bottom, r.top, sp ? sp.getBoundingClientRect().top : -1].map(y => y - c.top).filter(y => y > 0 && y < ch);
     return { v, h };
   }
+  /* The i line: the circle through 1, i, -1 and -i, straight because it runs through -1. Drawn in perspective, clipped at the
+     camera, thicker as it comes closer. Once the camera lines up with it, the part nearer than the page's stage edge is drawn on
+     a layer above the page, so the line comes out from behind the page and runs over it; a small mark shows where it goes through. */
+  function qiline(G, t, al, k2) {
+    if (al <= .01) return;
+    const a = [12, 0, 0], b = [-12, 0, 0], za = dot3(sub(a, QV.E), QV.f), zb = dot3(sub(b, QV.E), QV.f), near = .03;
+    if (za < near && zb < near) return;
+    const s1 = zb < near ? (za - near) / (za - zb) : 1, N = 60, P = [];
+    for (let n = 0; n <= N; n++) { const s = s1 * (1 - Math.pow(1 - n / N, 3)), v = [mix(a[0], b[0], s), 0, 0], z = mix(za, zb, s); P.push([qp(v), z]); }
+    const edge = fxOn() && k2 > .3 ? stage.getBoundingClientRect().left - cv.getBoundingClientRect().left : -1e9;
+    let cross = -1;
+    for (let n = 1; n <= N; n++) {
+      const [p, z] = P[n], [o, zo] = P[n - 1];
+      if (!p || !o) continue;
+      const over = p[0] < edge && o[0] < edge;
+      if (over && cross < 0) cross = n - 1;
+      const ctx = over ? fg : g, w = Math.min(14, 1.2 * Math.max(1, QV.z0 / Math.max(.05, (z + zo) / 2)));
+      ctx.lineCap = 'butt';
+      ctx.globalAlpha = al * .5 * (1 - k2); ctx.strokeStyle = C.R; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(o[0], o[1]); ctx.lineTo(p[0], p[1]); ctx.stroke();
+      ctx.globalAlpha = al * .8 * k2; ctx.strokeStyle = C.ink; ctx.stroke();
+      if (over) fxUsed = true;
+    }
+    if (cross > 0 && P[cross][0]) {                                        // where it goes through the page: a ring and four ticks, pulsing
+      const c = P[cross][0], r = 7 + 4 * Math.sin(t * 7), a2 = al * k2;
+      fg.globalAlpha = a2; fg.strokeStyle = C.acc; fg.lineWidth = 1.5; fg.beginPath(); fg.ellipse(c[0], c[1], r * .45, r, 0, 0, TAU); fg.stroke();
+      fg.beginPath(); [[0, -1], [0, 1]].forEach(([dx, dy]) => { fg.moveTo(c[0], c[1] + dy * (r + 4)); fg.lineTo(c[0], c[1] + dy * (r + 11)); }); fg.stroke();
+      fg.globalAlpha = a2 * .7; fg.strokeStyle = C.glA; fg.beginPath(); fg.ellipse(c[0] - 2, c[1], r * .45, r, 0, 0, TAU); fg.stroke();
+      fg.strokeStyle = C.glB; fg.beginPath(); fg.ellipse(c[0] + 2, c[1], r * .45, r, 0, 0, TAU); fg.stroke();
+      fxUsed = true;
+    }
+  }
   function gimbalIntro(G, t) {
     fadeWorld(G, t + 14, st(12.4, 13.6, t));
     if (t >= Q_END) return 1;
     const A = st(-.35, .05, t), R0 = Math.min(G.S * .46, cw * .34);
-    /* the view: an orbit around the gimbal; the second turn swings it round to look straight down the i line (yaw 90°, no tilt, flat) */
-    const orb = -.55 + .1 * t, face = eio(st(10, Q_FLAT, t));
-    Object.assign(QV, qview(G.A[0], G.A[1], R0, mix(orb, Math.PI / 2, face), mix(.42, 0, face), mix(.14, 0, face)));
+    /* The view: an orbit around the gimbal. In the second turn the camera comes down off the orbit and lines itself up with
+       the i line, just beside it on the side where it runs off to the left, then looks along it at the plane. The plane is then
+       square to the camera, so it lands flat on the screen, and the i line runs from beside the camera to its vanishing point. */
+    const k2 = eio(st(9.85, Q_FLAT, t)), V0 = qorbit(G.A[0], G.A[1], R0, -.55 + .1 * t, .42, .14);
+    if (k2 <= 0) Object.assign(QV, V0);
+    else {
+      const E1 = [-Q_CAM[0], Q_CAM[1], Q_CAM[2]], E = [mix(V0.E[0], E1[0], k2), mix(V0.E[1], E1[1], k2), mix(V0.E[2], E1[2], k2)];
+      const cam = { E, f: unit([mix(V0.f[0], 1, k2), mix(V0.f[1], 0, k2), mix(V0.f[2], 0, k2)]) };
+      cam.r = unit(cross(cam.f, [mix(V0.u[0], 0, k2), mix(V0.u[1], 1, k2), mix(V0.u[2], 0, k2)])); cam.u = cross(cam.r, cam.f);
+      cam.z0 = -dot3(E, cam.f); cam.F = R0 * cam.z0;                       // the sphere keeps its size and its place on the page
+      cam.x = G.A[0] + R0 * dot3(E, cam.r); cam.y = G.A[1] - R0 * dot3(E, cam.u);
+      Object.assign(QV, cam);
+    }
     const e = qeul(Math.min(t, 3.9)), fold = eio(st(3.9, 4.65, t)), tile = t > 11.8 ? qtile() : null;
     const lines = [], merge = st(Q_FLAT, 12.4, t);                           // merge: the plane's grid gives way to the cross and the page
     const lock = st(2.62, 2.75, t) * (1 - st(3.75, 3.95, t)), flick = t < 1 && (t * 20 | 0) % 3 === 0 ? .35 : 1;
@@ -2200,7 +2263,7 @@ const lore = (() => {
       const pts = qcirc(nn, r, 240, st(.05 + i * .17, .75 + i * .17, t)).map(Q);
       /* on the plane the j-k ring (red) stays a circle and is drawn on its own below; Y and Z are the cross, handed to the full-length lines */
       const al = A * flick * (i === 1 ? (t < Q_FLAT ? 1 : 0) : 1 - st(Q_FLAT, Q_FLAT + .25, t));
-      lines.push({ pts: pts.map(v => (v ? qp(v) : null)), col: col[i], al, w: i ? 2 : 2.4 });
+      lines.push({ pts: qproj(pts), col: col[i], al, w: i ? 2 : 2.4 });
       if (lock > 0 && i !== 1) {                                           // the two rings that became one: a split edge
         const o = (i ? 1 : -1) * 3 * lock * ((t * 16 | 0) % 2 ? 1 : .4);
         lines.push({ pts: pts.map(v => { if (!v) return null; const p = qp(v); return [p[0] + o, p[1], p[2]]; }), col: i ? C.glB : C.glA, al: A * lock * .7, w: 1.2 });
@@ -2218,13 +2281,9 @@ const lore = (() => {
       let pts = L.pts;
       if (L.lat) { if (L.la > top) return; }
       else pts = pts.filter((v, i) => -Math.PI / 2 + i / 96 * Math.PI <= top);
-      lines.push({ pts: pts.map(Q).map(v => (v ? qp(v) : null)), col: C.ink2, al: A * .55 * (1 - merge), w: 1 });
+      lines.push({ pts: qproj(pts.map(Q)), col: C.ink2, al: A * .55 * (1 - merge), w: 1 });
     });
     if (build > 0 && build < 1) lines.push({ pts: qcirc([0, 1, 0], Math.cos(top), 64).map(v => qp([v[0], Math.sin(top), v[2]])), col: C.acc, al: A, w: 2 });
-    if (t > 4.7 && t < 10.6) {                                             // the i line: the circle through 1, i, -1 and -i, straight because it runs through -1
-      const a = st(4.7, 5.2, t) * A * (1 - st(10, 10.6, t));                 // (it turns end-on to us in the second turn)
-      lines.push({ pts: [qp([-6, 0, 0]), qp([0, 0, 0]), qp([6, 0, 0])].map(p => [p[0], p[1], .001]), col: C.R, al: a * .5, w: 1, long: true });
-    }
     qstroke(lines, false);
 
     /* the cube, inside: it shrinks into the point 1 as the rings fold */
@@ -2238,6 +2297,7 @@ const lore = (() => {
       qcube(e, cs, A);
     }
     qstroke(lines, true);
+    if (t > 4.7) qiline(G, t, A * st(4.7, 5.2, t) * (1 - st(12.3, 12.9, t)), k2);
 
     /* the named points: 1 at the centre, i, j, k on the sphere; in beat 4 they ride along with q */
     const ptAl = A * st(4.4, 4.9, t) * (1 - merge), q1 = qs / (1 + qc);
@@ -2251,7 +2311,7 @@ const lore = (() => {
     /* the stereographic idea in two dimensions, as on eater.net: a circle, projected from -1 onto a line */
     const ins = A * st(4.0, 4.4, t) * (1 - st(5.75, 6.1, t));
     if (ins > 0 && G.B > 230) {
-      const r = R0 * .17, c = [QV.x - R0 * 1.42, QV.y + R0 * .66], m = [c[0] - r, c[1]], ph = 1.1 + t * 1.6, p = [c[0] + Math.cos(ph) * r, c[1] - Math.sin(ph) * r];
+      const r = R0 * .17, c = [G.A[0] - R0 * 1.42, G.A[1] + R0 * .66], m = [c[0] - r, c[1]], ph = 1.1 + t * 1.6, p = [c[0] + Math.cos(ph) * r, c[1] - Math.sin(ph) * r];
       const tq = Math.sin(ph) / (1 + Math.cos(ph)), y = c[1] - cl(tq, -2.6, 2.6) * r;
       g.lineWidth = 1; g.strokeStyle = C.ink2; g.globalAlpha = ins * .8; oval(c, r, r); g.stroke(); seg([c[0], c[1] - r * 2.6], [c[0], c[1] + r * 2.6]);
       g.strokeStyle = C.acc; g.setLineDash([3, 3]); seg(m, [c[0], y]); g.setLineDash([]);
@@ -2296,9 +2356,9 @@ const lore = (() => {
     /* the read-out, beside the sphere */
     if (G.B > 230) {
       const ra = A * st(.6, 1, t) * (1 - st(Q_FLAT, Q_FLAT + .35, t));
-      let x = QV.x + R0 * 1.16 + 12, al = 'left';
-      if (x + 140 > cw) { x = QV.x - R0 * 1.16 - 12; al = 'right'; }
-      const y = QV.y - R0 * .78, L = (i, s, c, a = 1) => text(s, x, y + i * 15, c, ra * a, al);
+      let x = G.A[0] + R0 * 1.16 + 12, al = 'left';
+      if (x + 140 > cw) { x = G.A[0] - R0 * 1.16 - 12; al = 'right'; }
+      const y = G.A[1] - R0 * .78, L = (i, s, c, a = 1) => text(s, x, y + i * 15, c, ra * a, al);
       if (t < 3.9) {
         L(0, 'ROTATE ORDER ZXY', C.ink2);
         L(1, 'Y ' + qdeg(e[0]), C.Y); L(2, 'X ' + qdeg(e[1]), C.R); L(3, 'Z ' + qdeg(e[2]), C.L);
@@ -2333,6 +2393,11 @@ const lore = (() => {
   }
   const endT = () => (mode === 'vault' ? V_END : mode === 'bloom' ? B_END : mode === 'gimbal' ? Q_END : END_T);
   const clock_t = () => (mode === 'origin' ? story(clock) : clock);
+  /* a layer above the page (under the header) for anything that should come in front of it; cleared each frame it was used */
+  const fx = mk('canvas', 'lore-fx'), fg = fx.getContext('2d');
+  fx.setAttribute('aria-hidden', 'true'); document.body.append(fx);
+  let fxUsed = false;
+  const fxOn = () => wide.matches;
   function fit() {
     const bg = wide.matches;
     if (!cv.parentNode || bg !== cv.classList.contains('lore--bg')) { cv.classList.toggle('lore--bg', bg); (bg ? document.body : stage).prepend(cv); }
@@ -2341,6 +2406,7 @@ const lore = (() => {
     cw = cv.clientWidth; ch = cv.clientHeight;
     cd = Math.min(2, devicePixelRatio || 1, Math.sqrt(5e6 / Math.max(1, cw * ch)));
     cv.width = oc.width = Math.round(cw * cd); cv.height = oc.height = Math.round(ch * cd);
+    fx.width = cv.width; fx.height = cv.height; fx.hidden = !bg;
   }
   function geometry(now) {
     const sr = stage.getBoundingClientRect(), cr = cv.getBoundingClientRect(), x0 = sr.left - cr.left, y0 = sr.top - cr.top;
@@ -2395,6 +2461,8 @@ const lore = (() => {
     if (!cw || !ch || !W || !H) return;
     const G = geometry(now), t = clock_t();
     g.setTransform(cd, 0, 0, cd, 0, 0); g.clearRect(0, 0, cw, ch); g.lineCap = 'butt'; g.lineJoin = 'miter'; g.setLineDash([]);
+    if (fxUsed) { fg.setTransform(1, 0, 0, 1, 0, 0); fg.clearRect(0, 0, fx.width, fx.height); fxUsed = false; }
+    fg.setTransform(cd, 0, 0, cd, 0, 0);
     const floorY = reveal.getBoundingClientRect().bottom - cv.getBoundingClientRect().top;   // nothing is drawn below the reveal row, so the credits stay clean
     g.save(); g.beginPath(); g.rect(0, 0, cw, Math.min(ch, floorY)); g.clip();
     figOp = 1;
