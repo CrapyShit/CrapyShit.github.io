@@ -361,9 +361,13 @@ a.gtile:hover b{text-decoration:underline;text-decoration-color:var(--accent);te
 /* ---------- about: the path (a scroll-driven ride past one building per CV entry) ---------- */
 .run{position:relative;height:calc((100vh - var(--hdr)) * 8);height:calc((100svh - var(--hdr)) * 8);border-top:1px solid var(--line)}
 .run-st{position:sticky;top:var(--hdr);height:calc(100vh - var(--hdr));height:calc(100svh - var(--hdr));overflow:hidden;background:var(--ground)}
-#run-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#run-cv,.run-fx,.run-ui{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+#run-cv,.run-fx{image-rendering:pixelated;image-rendering:crisp-edges}
+.run-ui{background:repeating-linear-gradient(to bottom,transparent 0 2px,color-mix(in srgb,var(--ink) 5%,transparent) 2px 3px)}   /* scan lines */
+.run--flat{height:auto}.run--flat .run-st{position:static;height:auto;display:grid;gap:1rem;padding:var(--pad)}
+.run--flat #run-cv,.run--flat .run-hud,.run--flat .run-tl,.run--flat .run-sp{display:none}.run--flat .run-p{position:static;visibility:visible;opacity:1;transform:none;width:auto}
 .run-p{position:absolute;left:0;top:0;width:26rem;display:grid;gap:.65rem;padding:1.5rem 1.6rem;transform-origin:0 0;will-change:transform,opacity;
-  visibility:hidden;opacity:0;background:color-mix(in srgb,var(--ground) 28%,transparent);-webkit-backdrop-filter:blur(1.5px);backdrop-filter:blur(1.5px);outline:0;
+  visibility:hidden;opacity:0;background:none;outline:0;
   text-shadow:0 0 6px var(--ground),0 0 2px var(--ground)}
 .run-p h3{font-size:2.1rem;line-height:.95}
 .run-p .run-r{color:var(--accent)}
@@ -2975,9 +2979,13 @@ const grav = (() => {
    front of it, which carries the HTML text for that stop, mapped onto the panel in perspective. Clicking an entry in the
    Experience or Education lists, or a tick on the timeline, warps you to that stop. Drawn in the theme's colours. */
 const run = (() => {
-  const sec = $('#run'), box = $('#run-st'), cvR = $('#run-cv'), x = cvR.getContext('2d'), panels = $$('.run-p'), ticks = $$('#run-tl button');
+  const sec = $('#run'), box = $('#run-st'), glc = $('#run-cv'), panels = $$('.run-p'), ticks = $$('#run-tl button');
   const hudN = $('#run-n'), hudT = $('#run-t');
   if (!sec) return null;
+  const gl = glc.getContext('webgl', { antialias: false, alpha: false, depth: false, powerPreference: 'high-performance' });
+  if (!gl) { sec.classList.add('run--flat'); return null; }                // no WebGL: the panels simply stack, no scene
+  const fxc = mk('canvas', 'run-fx'), uic = mk('canvas', 'run-ui'), fx = fxc.getContext('2d'), x = uic.getContext('2d');
+  fxc.setAttribute('aria-hidden', 'true'); uic.setAttribute('aria-hidden', 'true'); glc.after(fxc, uic);
   const N = panels.length, cl = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
   const sm = (a, b, v) => { const t = cl((v - a) / (b - a)); return t * t * (3 - 2 * t); };
   const eio = v => { v = cl(v); return v < .5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2; };
@@ -3192,110 +3200,21 @@ const run = (() => {
   }
   STOP.forEach((S, k) => { S.code = CODES[ORDER[k]] || 'S-' + k; });
   const BLD = STOP.map((S, k) => building(k));
-  BLD.forEach((b, k) => { let gi = 0; b.parts.forEach(p => p.F.forEach(f => { f.g = null; f.k = k; f.gi = gi++ >> 3; })); });
   BLD.forEach((b, k) => {                                                   // each building's centre and reach, for framing it
     let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
     b.parts.forEach(p => p.F.forEach(f => f.pts.forEach(q => { lo = lo.map((v, i) => Math.min(v, q[i])); hi = hi.map((v, i) => Math.max(v, q[i])); })));
     STOP[k].Tb = mul(add(lo, hi), .5); STOP[k].ext = sub(hi, lo);
   });
-  /* the rest of the district: a kit of props either side (crate stacks, containers, small tanks, towers), lighter on detail */
-  const FILL = [], KITC = [PAL.white, PAL.white, PAL.bone, PAL.black, PAL.blue, PAL.lime, PAL.orange];
-  for (let z = -10; z < ZEND + 30; z += 8 + rnd() * 5) [-1, 1].forEach(s => {
-    if (STOP.some(S => S.s === s && z > S.z - 32 && z < S.z + 20) || Math.abs(ZSP - z) < 14) return;   // keep the parked views and the spark clear
-    const bx = xs(z) + s * (10 + rnd() * 7), P = [], c0 = KITC[rnd() * KITC.length | 0], kind = rnd();
-    setFrame(bx, z, -s);
-    if (kind < .3) {                                                        // a crate stack
-      const nx = 1 + (rnd() * 2 | 0), ny = 1 + (rnd() * 3 | 0);
-      for (let a = 0; a < nx; a++) for (let b = 0; b < ny - (a ? 1 : 0); b++) {
-        P.push(rbox([0, b * 1.95, a * 2.7 - 1.3], 'y', 1.85, 3.2, 2.5, .28, .14, PAL.white, { seg: 1 }), rbox([0, b * 1.95 + 1.8, a * 2.7 - 1.3], 'y', .25, 3.3, 2, .2, .08, c0 === PAL.white ? PAL.blue : c0, { seg: 1 }));
-      }
-    } else if (kind < .55) {                                                // a long container lying along the road
-      const L = 5 + rnd() * 5; P.push(rbox([0, 0, -L / 2], 'z', L, 2.8, 2.6, .7, .25, c0, { seg: 2 }));
-      if (rnd() < .6) P.push(plate([1.42, 1.3, 0], FRONT, Math.min(3, L * .4), 1.3, [{ t: 'stripes', col: c0 === PAL.black ? PAL.white : PAL.black }]));
-    } else if (kind < .75) {                                                // a capsule tank on a cradle
-      P.push(rbox([0, 0, -3], 'z', 6, 2.4, .8, .2, 0, PAL.black, { seg: 1 }), tank([0, 2.2, -3.2], 'z', 6.4, 1.4, rnd() < .5 ? PAL.white : PAL.bone, true, 14));
-    } else {                                                                // a tower block with a cap
-      const h = 6 + rnd() * 8; P.push(rbox([0, 0, 0], 'y', h, 3.6, 3.6, .8, .25, c0, { seg: 2 }), rbox([0, h, 0], 'y', .8, 4, 4, .5, .15, c0 === PAL.black ? PAL.lime : PAL.black, { seg: 1 }));
-      if (rnd() < .5) P.push(plate([1.82, h * .45, 0], FRONT, 2.6, 1.6, [{ t: 'grille', col: c0 === PAL.black ? PAL.white : PAL.black }]));
-    }
-    FILL.push({ parts: P, c: [bx, 3, z] });
-  });
-  const SKY = [];                                                           // a wire city further out
-  for (let i = 0; i < 90; i++) { const s = rnd() < .5 ? -1 : 1, z = -20 + rnd() * (ZEND + 60); SKY.push({ x: xs(z) + s * (26 + rnd() * 40), z, w: 3 + rnd() * 6, d: 3 + rnd() * 6, h: 6 + rnd() * 26 }); }
-
-  /* ----- camera ----- */
-  let W = 0, H = 0, dpr = 1, cam = null;
-  function look(E, T) {
-    const f = unit(sub(T, E)), r = unit(cross([0, 1, 0], f)), u = cross(f, r);
-    return { E, f, r, u, F: H * .95, cx: W / 2, cy: H * .52 };
-  }
-  const toC = p => { const d = sub(p, cam.E); return [dot(d, cam.r), dot(d, cam.u), dot(d, cam.f)]; };
-  const scr = c => [cam.cx + cam.F * c[0] / c[2], cam.cy - cam.F * c[1] / c[2]];
-  const pj = p => { const c = toC(p); return c[2] > .1 ? [...scr(c), c[2]] : null; };
-  function clipPoly(P) {                                                    // camera-space polygon clipped to z > near
-    const out = [], NZ = .12;
-    for (let i = 0; i < P.length; i++) {
-      const a = P[i], b = P[(i + 1) % P.length], ia = a[2] > NZ, ib = b[2] > NZ;
-      if (ia) out.push(a);
-      if (ia !== ib) { const k = (NZ - a[2]) / (b[2] - a[2]); out.push([mix(a[0], b[0], k), mix(a[1], b[1], k), NZ]); }
-    }
-    return out;
-  }
-  function seg3(a, b) {                                                     // a 3D segment, clipped, to screen
-    let A = toC(a), Bc = toC(b);
-    if (A[2] < .12 && Bc[2] < .12) return null;
-    if (A[2] < .12) { const k = (.12 - A[2]) / (Bc[2] - A[2]); A = [mix(A[0], Bc[0], k), mix(A[1], Bc[1], k), .12]; }
-    if (Bc[2] < .12) { const k = (.12 - Bc[2]) / (A[2] - Bc[2]); Bc = [mix(Bc[0], A[0], k), mix(Bc[1], A[1], k), .12]; }
-    return [scr(A), scr(Bc), (A[2] + Bc[2]) / 2];
-  }
-
-  /* ----- timeline: scroll units t (0 .. T). The camera runs along the road (u), and near each stop it blends to a parked view
-     that frames the building in two thirds of the screen, the panel taking the last third. The road keys bracket each parked
-     view (behind it on the way in, past it on the way out), so the camera only ever moves forward. ----- */
-  const TK = STOP.map((S, k) => 1.4 + k * 2.1), TSP = TK[N - 1] + 2.3, T = TSP + .25;
-  const narrow = () => W < 760 || W < H;
-  function parked(k) {                                                      // where the camera parks for stop k, and where it looks
-    const S = STOP[k], s = S.s, dir = unit([s * .6, -.2, .78]), nar = narrow(), F = H * .95;
-    const hz = Math.max(S.ext[0], S.ext[2]) * .5, vt = S.ext[1] * .5;          // fit the width into two thirds and the height into the frame
-    const D = Math.max(12, nar ? Math.max(hz * F / (W * .4), vt * F / (H * .22)) : Math.max(hz * F / (W / 3.6), vt * F / (H * .3))) * 1.15 + hz * 1.1;
-    const E = sub(S.Tb, mul(dir, D)), r = unit(cross([0, 1, 0], dir)), u = cross(dir, r);
-    const Tg = nar ? sub(S.Tb, mul(u, H * .2 * D / F)) : sub(S.Tb, mul(r, s * (W / 6) * D / F));
-    return [E, Tg];
-  }
-  let UK = [];
-  function keys() {
-    UK = [[0, -6], [1, 4]];
-    STOP.forEach((S, k) => { const z = parked(k)[0][2]; UK.push([TK[k] - .5, z - 4], [TK[k] + .5, z + 3]); });
-    UK.push([TSP - .7, ZSP - 16], [TSP, ZSP - 6.5], [T, ZSP - 6]);
-  }
-  function ukey(t) {                                                        // monotone cubic through UK
-    const K = UK, n = K.length - 1;
-    if (t <= K[0][0]) return K[0][1];
-    if (t >= K[n][0]) return K[n][1];
-    let i = 0; while (t > K[i + 1][0]) i++;
-    const M = i2 => (K[i2 + 1][1] - K[i2][1]) / (K[i2 + 1][0] - K[i2][0]), tg = i2 => (i2 <= 0 || i2 >= n ? 0 : (M(i2 - 1) * M(i2) <= 0 ? 0 : 2 * M(i2 - 1) * M(i2) / (M(i2 - 1) + M(i2))));
-    const h = K[i + 1][0] - K[i][0], u = (t - K[i][0]) / h, u2 = u * u, u3 = u2 * u;
-    return (2 * u3 - 3 * u2 + 1) * K[i][1] + (u3 - 2 * u2 + u) * h * tg(i) + (3 * u2 - 2 * u3) * K[i + 1][1] + (u3 - u2) * h * tg(i + 1);
-  }
-  const pull = (k, t) => sm(TK[k] - .8, TK[k] - .3, t) * (1 - sm(TK[k] + .3, TK[k] + .8, t));
-  const sparkW = t => sm(TSP - 1, TSP - .15, t);
-  function camAt(t) {
-    const u = ukey(t), E0 = [xs(u) - (xs(u + 12) - xs(u)) * .25, 2.6, u], T0 = [xs(u + 14), 1.1, u + 14];
-    let E = E0, Tg = T0;
-    STOP.forEach((S, k) => { const w = eio(pull(k, t)); if (w > 0) { const [Ep, Tp] = parked(k); E = mixV(E, Ep, w); Tg = mixV(Tg, Tp, w); } });
-    const sw = eio(sparkW(t)); if (sw > 0) { E = mixV(E, [SPARK[0] - .4, 2.3, ZSP - 6], sw); Tg = mixV(Tg, SPARK, sw); }
-    const o = 1 - eio(sm(0, 1.05, t));                                      // the start: a high, tilted map of the whole road
-    if (o > 0) { const mid = ZEND * .42; E = mixV(E, [xs(mid) + 52, 74, mid - 70], o); Tg = mixV(Tg, [xs(mid), 0, mid + 6], o); }
-    return look(E, Tg);
-  }
-
-  /* ----- drawing ----- */
-  /* ----- drawing the kit: flat shading from one light, haze toward the ground colour, decals through an affine map ----- */
+  /* ===== hologram renderer =====
+     Everything in the scene is points and lines in a few GPU buffers, built once: the buildings are sampled into glowing pixels
+     (surfaces sparse, edges and decals dense), the road, the floor, the props and the core are made from formulas. The vertex
+     shader animates them (road pulses, scan sweeps, streams, spinning rings, the adrift blocks, glitch jitter and torn rows) and
+     dissolves them into coarse pixels toward the edge of the render limit. Additive blending on dark themes, so nothing is sorted.
+     The canvas renders at reduced resolution and is scaled up without smoothing, which is both the pixel look and the speed. */
   const RGB = {};
   function rgb(c) {
     if (RGB[c]) return RGB[c];
-    let v = [128, 128, 128];
-    const m = String(c).trim();
+    let v = [128, 128, 128]; const m = String(c).trim();
     if (m[0] === '#') { let h = m.slice(1); if (h.length === 3) h = h.replace(/./g, '$&$&'); const n = parseInt(h.slice(0, 6), 16); v = [n >> 16 & 255, n >> 8 & 255, n & 255]; }
     else { const q = m.match(/[\d.]+/g); if (q) v = q.slice(0, 3).map(Number); }
     return (RGB[c] = v);
@@ -3311,13 +3230,13 @@ const run = (() => {
     'R': '11110100011000111110101001001010001', 'S': '01111100001000001110000010000111110', 'T': '11111001000010000100001000010000100', 'U': '10001100011000110001100011000101110',
     'Y': '10001100010101000100001000010000100', 'Z': '11111000010001000100010001000011111', 'X': '10001100010101000100010101000110001', '-': '00000000000000011111000000000000000', ' ': '0'.repeat(35)
   };
-  function decal(d, p3, U, V) {
+  function decalTo(x, d, p3, U, V) {                                    // a decal drawn through an affine map of its rectangle
     const u0 = d.u0 == null ? 0 : d.u0, v0 = d.v0 == null ? 0 : d.v0, du = (d.u1 == null ? 1 : d.u1) - u0, dv = (d.v1 == null ? 1 : d.v1) - v0;
     const o = [p3[0] + U[0] * u0 + V[0] * v0, p3[1] + U[1] * u0 + V[1] * v0];
     const sx = Math.hypot(U[0], U[1]) * du, sy = Math.hypot(V[0], V[1]) * dv;
     if (sx < 3 || sy < 2) return;
     const a = U[0] * du / 100, b = U[1] * du / 100, c = V[0] * dv / 100, e = V[1] * dv / 100;
-    x.save(); x.setTransform(dpr * a, dpr * b, dpr * c, dpr * e, dpr * o[0], dpr * o[1]);
+    x.save(); x.setTransform(a, b, c, e, o[0], o[1]);
     x.fillStyle = col(d.col || PAL.black); x.strokeStyle = x.fillStyle;
     if (d.t === 'stripes') {
       x.beginPath(); x.rect(0, 0, 100, 100); x.clip();
@@ -3346,117 +3265,204 @@ const run = (() => {
     x.restore();
   }
   const LOGO_SQ = new Path2D('M9 1h30v30l-8 8H1V9z'), LOGO_EYE_T = new Path2D('M0 4A10 10 0 0 1 16 4V4.05H10V2H6V4.05H0z'), LOGO_EYE_B = new Path2D('M16 4A10 10 0 0 1 0 4V3.95H6V6H10V3.95H16z');
-  function drawParts(objs, dist) {                                          // painter's order over all visible faces and lines
-    PAT = null;
-    const Q = [], G = rgb(C.ground), Lc = toC(add(cam.E, Lgt));
-    objs.forEach(o => {
-      const c = toC(o.c);
-      if (c[2] < -o.r || c[2] - o.r > dist) return;
-      if (Math.abs(c[0]) - o.r > c[2] * W / cam.F * .6 + 2 && c[2] > 0) return;   // well off to the side of the view
-      const tiny = o.r * cam.F / Math.max(1, c[2]) < 2.5;
-      if (tiny) return;
-      o.F.forEach(F => {
-        if (dot(F.n, sub(cam.E, F.pts[0])) <= 0) return;
-        const C3 = clipPoly(F.pts.map(toC)); if (C3.length < 3) return;
-        let z = 0; C3.forEach(p => { z += p[2]; }); z /= C3.length;
-        Q.push([z - (F.plate ? .05 : 0), C3, F]);
-      });
-      o.L.forEach(l => { const r = seg3(l.pts[0], l.pts[1]); if (r) Q.push([r[2], null, l, r]); });
-    });
-    Q.sort((a, b) => b[0] - a[0]).forEach(([z, C3, F, r]) => {
-      const fog = sm(dist * .35, dist, z) * .85;
-      if (!C3) { x.globalAlpha = 1 - fog; x.strokeStyle = F.col; x.lineWidth = Math.max(.7, Math.min(2, 30 / z)); x.beginPath(); x.moveTo(r[0][0], r[0][1]); x.lineTo(r[1][0], r[1][1]); x.stroke(); return; }
-      const S2 = C3.map(scr);
-      x.beginPath(); S2.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.closePath();
-      const wire = F.g != null && F.g === glitchObj && hsh(F.gi, glitchObj) < .5;   // a building in a glitch burst drops to wireframe in places
-      if (F.col && !wire) {
-        const base = rgb(F.col), l = .5 + .5 * Math.max(0, dot(F.n, Lgt)) + (F.n[1] > .6 ? .08 : 0), sh = base.map((v, i) => Math.round(mix(v * Math.min(1.08, l), G[i], fog)));
-        const cs = 'rgb(' + sh[0] + ',' + sh[1] + ',' + sh[2] + ')';
-        x.globalAlpha = F.edge ? .85 : 1; x.fillStyle = cs; x.fill(); x.strokeStyle = cs; x.lineWidth = .8; if (!F.edge) x.stroke();   // stroke in the same colour closes the seams
-        if (!F.plate && z < 60) { x.globalAlpha = .3 * (1 - fog); x.fillStyle = pat(); x.fill(); }   // the pixel grid: a digitised surface
-        if (F.cap) { x.globalAlpha = .18 * (1 - fog); x.strokeStyle = '#000'; x.stroke(); }
-        if (!F.edge) { x.globalAlpha = .07 * (1 - fog); x.strokeStyle = C.glB; x.lineWidth = .6; x.stroke(); }
-      }
-      if (F.edge || wire) { x.globalAlpha = (F.ea || .9) * (1 - fog); x.strokeStyle = wire ? (hsh(F.gi, 3) < .5 ? C.glA : C.glB) : C[F.edge] || F.edge; x.lineWidth = 1.1; x.stroke(); }
-      if (F.dec && fog < .7 && z < dist * .7) {
-        const P = F.pts.map(pj);
-        if (P.every(Boolean)) {
-          const U = [P[2][0] - P[3][0], P[2][1] - P[3][1]], V = [P[0][0] - P[3][0], P[0][1] - P[3][1]];
-          x.globalAlpha = 1 - fog / .7; F.dec.forEach(d => decal(d, P[3], U, V));
-        }
-      }
-    });
+  /* ----- vertex data: pos(3) off(3) col(4) misc(4: size, building, speed/phase, kind) extra(2) ----- */
+  const STRIDE = 16, PT = [], LN = [];
+  const U_ACC = -1, U_GLB = -2, U_INK = -3, U_LINE = -4;
+  function vtx(arr, p, o, c, a, size, bid, sp, kind, e0 = 0, e1 = 0) {
+    arr.push(p[0], p[1], p[2], o[0], o[1], o[2], c[0], c[1], c[2], a, size, bid, sp, kind, e0, e1);
   }
-  function road(t, time) {
-    const u = ukey(t), z0 = Math.max(-8, cam.E[2] - 30), z1 = Math.min(ZEND + 20, cam.E[2] + 140), lanes = 9;
-    /* the floor grid, following the road */
-    x.lineWidth = 1; x.strokeStyle = C.line;
-    for (let gz = Math.ceil(z0 / 3) * 3; gz < z1; gz += 3) {
-      const r = seg3([xs(gz) - 60, 0, gz], [xs(gz) + 60, 0, gz]); if (!r) continue;
-      x.globalAlpha = .55 * (1 - sm(40, 140, r[2])); x.beginPath(); x.moveTo(r[0][0], r[0][1]); x.lineTo(r[1][0], r[1][1]); x.stroke();
+  const C255 = c => (typeof c === 'number' ? [c, 0, 0] : rgb(c).map(v => v / 255));
+  /* buildings: sample every face */
+  function sampleFace(F, bid) {
+    const P = F.pts, n = F.n, lit = .42 + .58 * Math.max(0, dot(n, Lgt)) + (n[1] > .6 ? .1 : 0);
+    if (F.col && !F.plate) {
+      const c = C255(F.col);
+      for (let i = 1; i < P.length - 1; i++) {                              // the fill: random pixels over each triangle of the fan
+        const a = P[0], b = P[i], d = P[i + 1], area = Math.hypot(...cross(sub(b, a), sub(d, a))) / 2, nPts = Math.min(900, area / (.34 * .34) | 0) + (rnd() < (area / .1156) % 1 ? 1 : 0);
+        for (let k = 0; k < nPts; k++) { let u = rnd(), v = rnd(); if (u + v > 1) { u = 1 - u; v = 1 - v; } vtx(PT, add(a, add(mul(sub(b, a), u), mul(sub(d, a), v))), [0, 0, 0], c.map(q => q * lit), .5, .075, bid, 0, 0); }
+      }
+      for (let i = 0; i < P.length; i++) {                                  // the edges: denser and brighter
+        const a = P[i], b = P[(i + 1) % P.length], L = Math.hypot(...sub(b, a)), m = Math.max(1, L / .15 | 0);
+        for (let k = 0; k < m; k++) vtx(PT, add(a, mul(sub(b, a), k / m)), [0, 0, 0], c.map(q => Math.min(1, q * lit * 1.2)), F.cap ? .9 : .55, .065, bid, 0, 0);
+      }
     }
-    for (let gx = -60; gx <= 60; gx += 3) {
-      x.globalAlpha = .4; x.beginPath(); let on = false;
-      for (let gz = z0; gz < z1; gz += 4) { const p = pj([xs(gz) + gx, 0, gz]); if (!p) { on = false; continue; } x.globalAlpha = .4; if (on) x.lineTo(p[0], p[1]); else x.moveTo(p[0], p[1]); on = true; }
-      x.stroke();
-    }
-    /* the road: lanes of light running forward */
-    const dz = .55, motion = still.matches ? 0 : time;
-    for (let j = 0; j < lanes; j++) {
-      const off = (j / (lanes - 1) - .5) * 2 * ROAD, edge = j === 0 || j === lanes - 1;
-      x.fillStyle = edge ? C.acc : j % 3 ? C.glB : C.acc;
-      for (let z = Math.ceil(z0 / dz) * dz; z < z1; z += dz) {
-        if (z > ZSP + .5) break;
-        const nf = 1 - .97 * sm(ZSP - 34, ZSP, z), tx = (xs(z + .5) - xs(z - .5)), nl = Math.hypot(tx, 1), p = pj([xs(z) + off * nf / nl, .02 + .9 * sm(ZSP - 10, ZSP, z), z - off * nf * tx / nl]);
-        if (!p) continue;
-        const fl = (z * .35 - motion * 2.2 + j * .37) % 1, pulse = Math.pow((fl + 1) % 1, 6), d = p[2];
-        const a = (edge ? .9 : .32 + .6 * pulse) * (1 - sm(50, 150, d));
-        if (a < .02) continue;
-        const sz = Math.max(1, Math.min(5, (edge ? 2.4 : 1.6) * 30 / d));
-        x.globalAlpha = a; x.fillRect(p[0] - sz / 2, p[1] - sz / 2, sz, sz);
+    if (F.dec && F.dec.length) {                                            // decals: drawn once into a small canvas, then read back as pixels
+      const w = Math.hypot(...sub(P[1], P[0])), h = Math.hypot(...sub(P[3], P[0])), cw2 = Math.max(4, Math.round(w * 9)), ch2 = Math.max(4, Math.round(h * 9));
+      const cv2 = document.createElement('canvas'); cv2.width = cw2; cv2.height = ch2; const q = cv2.getContext('2d');
+      F.dec.forEach(d => decalTo(q, d, [0, 0], [cw2, 0], [0, ch2]));
+      const img = q.getImageData(0, 0, cw2, ch2).data, U = sub(P[2], P[3]), V = sub(P[0], P[3]);
+      for (let yy = 0; yy < ch2; yy++) for (let xx = 0; xx < cw2; xx++) {
+        const i = (yy * cw2 + xx) * 4; if (img[i + 3] < 90) continue;
+        let c = [img[i] / 255, img[i + 1] / 255, img[i + 2] / 255]; if (c[0] * .3 + c[1] * .59 + c[2] * .11 < .3) c = [.92, .94, 1];   // dark ink reads as light in a hologram
+        vtx(PT, add(P[3], add(mul(U, (xx + .5) / cw2), mul(V, (yy + .5) / ch2))), [0, 0, 0], c, .95, .1, bid, 0, 0);
       }
     }
   }
-  function sky(dist) {
-    x.lineWidth = 1; x.strokeStyle = C.glB;
-    SKY.forEach(b => {
-      const c = toC([b.x, b.h / 2, b.z]); if (c[2] < 5 || c[2] > dist * 1.3) return;
-      const hw = b.w / 2, hd = b.d / 2, V = [[-hw, 0, -hd], [hw, 0, -hd], [hw, 0, hd], [-hw, 0, hd]].flatMap(([a, , d]) => [[b.x + a, 0, b.z + d], [b.x + a, b.h, b.z + d]]).map(pj);
-      if (V.some(p => !p)) return;
-      x.globalAlpha = .22 * (1 - sm(dist * .7, dist * 1.3, c[2])); x.beginPath();
-      [[0, 1], [2, 3], [4, 5], [6, 7], [1, 3], [3, 5], [5, 7], [7, 1]].forEach(([i, j]) => { x.moveTo(V[i][0], V[i][1]); x.lineTo(V[j][0], V[j][1]); });
-      x.stroke();
-    });
+  BLD.forEach((b, k) => b.parts.forEach(p => { p.F.forEach(F => sampleFace(F, k)); p.L.forEach(l => { const a = l.pts[0], c2 = l.pts[1], m = Math.max(1, Math.hypot(...sub(c2, a)) / .15 | 0); for (let i = 0; i <= m; i++) vtx(PT, add(a, mul(sub(c2, a), i / m)), [0, 0, 0], [.75, .78, .85], .6, .06, k, 0, 0); }); }));
+  /* the road: lanes of points, pulsing in the shader (kind 1), narrowing and rising into the core */
+  for (let j = 0; j < 9; j++) {
+    const off = (j / 8 - .5) * 2 * ROAD, edge = j === 0 || j === 8;
+    for (let z = -12; z <= ZSP; z += .55) {
+      const nf = 1 - .97 * sm(ZSP - 34, ZSP, z), tx = xs(z + .5) - xs(z - .5), nl = Math.hypot(tx, 1);
+      vtx(PT, [xs(z) + off * nf / nl, .02 + .9 * sm(ZSP - 10, ZSP, z), z - off * nf * tx / nl], [j, edge ? 1 : 0, 0], [edge ? U_ACC : j % 3 ? U_GLB : U_ACC, 0, 0], .9, edge ? .14 : .1, -1, 0, 1);
+    }
   }
-  function extras(time) {                                                   // masts, light beams and floating read-outs at the stops
-    BLD.forEach((b, k) => {
-      const [mx, my, mz, mh] = b.mast, base = pj([mx, my, mz]), tip = pj([mx, my + mh, mz]);
-      if (base && tip && base[2] < 150) {
-        const a = 1 - sm(80, 150, base[2]); x.globalAlpha = a * .8; x.strokeStyle = C.ink2; x.lineWidth = 1;
-        x.beginPath(); x.moveTo(base[0], base[1]); x.lineTo(tip[0], tip[1]);
-        for (let i = 1; i < 4; i++) { const l = pj([mx - .6, my + mh * i / 4, mz]), r = pj([mx + .6, my + mh * i / 4, mz]); if (l && r) { x.moveTo(l[0], l[1]); x.lineTo(r[0], r[1]); } }
-        x.stroke();
-        if (!still.matches && (time * 1.5 + k) % 1 < .5) { x.globalAlpha = a; x.fillStyle = C.acc; x.fillRect(tip[0] - 2, tip[1] - 2, 4, 4); }
-      }
-      const S = STOP[k], g = pj([S.b[0], 0, S.b[2] - 6]), apex = pj([S.b[0], 22, S.b[2] - 6]);   // a wire beam over the stop
-      if (g && apex && g[2] < 160) {
-        const a = .35 * (1 - sm(80, 160, g[2])), cs = [[-2, -2], [2, -2], [2, 2], [-2, 2]].map(([dx, dz]) => pj([S.b[0] + dx, 0, S.b[2] - 6 + dz]));
-        if (cs.every(Boolean)) { x.globalAlpha = a; x.strokeStyle = C.glB; x.beginPath(); cs.forEach(c => { x.moveTo(c[0], c[1]); x.lineTo(apex[0], apex[1]); }); x.stroke(); }
-      }
-      b.tags.forEach(({ p, s }, i) => {
-        const q = pj(p); if (!q || q[2] > 90) return;
-        const a = 1 - sm(45, 90, q[2]), fs = Math.max(10, Math.min(24, 300 / q[2]));
-        x.globalAlpha = a * .7; x.strokeStyle = i ? C.acc : C.glA; x.lineWidth = 1; x.beginPath();
-        for (let r = 0; r < 4; r++) { const an = r * Math.PI / 4 + time * .4; x.moveTo(q[0] - Math.cos(an) * fs * .7, q[1] - Math.sin(an) * fs * .7); x.lineTo(q[0] + Math.cos(an) * fs * .7, q[1] + Math.sin(an) * fs * .7); }
-        x.stroke(); x.globalAlpha = a; x.fillStyle = C.ink; x.font = '600 ' + fs + 'px ' + MONO; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText(s, q[0] + fs * .5, q[1] - fs * .5);
-      });
-    });
+  /* lines of pixels running in all directions (kind 2: position from time in the shader) */
+  for (let i = 0; i < 70; i++) {
+    const z = -10 + rnd() * (ZSP + 10), sd = rnd() < .5 ? -1 : 1, kd = rnd(), d = kd < .4 ? [0, -1, 0] : kd < .6 ? [0, 1, 0] : kd < .8 ? [0, 0, 1] : [sd, 0, 0];
+    const o = [xs(z) + sd * (2.5 + rnd() * 28), rnd() * 14, z], n = 6 + (rnd() * 9 | 0), len = 10 + rnd() * 10, sp = 1.5 + rnd() * 4, ph = rnd() * 20, c = rnd() < .3 ? U_ACC : rnd() < .5 ? U_GLB : U_INK;
+    for (let m = 0; m < n; m++) vtx(PT, o, d, [c, 0, 0], 1 - m / n, .12, -1, sp, 2, m, len + ph * 1000);
   }
-  /* the panels float in front of the camera, in the third of the screen the building leaves free (the bottom on narrow screens),
-     turned a little toward the middle and bobbing; the HTML text is laid onto the pane with a perspective transform */
+  /* holographic props, from formulas: data pillars (square prisms of points with rings), and spinning rings (kind 4) */
+  for (let z = -6; z < ZSP - 18; z += 9 + rnd() * 6) [-1, 1].forEach(s => {
+    if (STOP.some(S => S.s === s && z > S.z - 32 && z < S.z + 20) || rnd() < .25) return;
+    const cx = xs(z) + s * (9 + rnd() * 16), h = 3 + rnd() * 12, r = .6 + rnd() * 1.4, c = rnd() < .35 ? U_ACC : U_GLB;
+    for (const [dx, dz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) for (let y = 0; y < h; y += .22) vtx(PT, [cx + dx * r, y, z + dz * r], [0, 0, 0], [c, 0, 0], .7, .08, -1, 0, 0);
+    for (let y = 0; y <= h; y += 1.1) for (let q = 0; q < 4; q++) { const a = [[-1, -1], [1, -1], [1, 1], [-1, 1]][q], b = [[-1, -1], [1, -1], [1, 1], [-1, 1]][(q + 1) % 4]; for (let t = 0; t < 1; t += .1) vtx(PT, [cx + mix(a[0], b[0], t) * r, y, z + mix(a[1], b[1], t) * r], [0, 0, 0], [c, 0, 0], y === 0 ? .9 : .35, .07, -1, 0, 0); }
+    if (rnd() < .6) { const R = r * (1.8 + rnd()), yy = h + .8 + rnd() * 2, sp = (rnd() < .5 ? -1 : 1) * (.3 + rnd() * .6); for (let a = 0; a < TAU; a += .09) vtx(PT, [cx, yy, z], [Math.cos(a) * R, Math.sin(a * 6) * .08, Math.sin(a) * R], [U_ACC, 0, 0], .8, .09, -1, sp, 4); }
+  });
+  for (let i = 0; i < 14; i++) {                                            // big slow rings over the road
+    const z = 10 + rnd() * (ZSP - 30), R = 3 + rnd() * 4, yy = 7 + rnd() * 6, sp = (rnd() < .5 ? -1 : 1) * (.08 + rnd() * .2), c = rnd() < .5 ? U_GLB : U_ACC;
+    for (let a = 0; a < TAU; a += .05) vtx(PT, [xs(z), yy, z], [Math.cos(a) * R, 0, Math.sin(a) * R], [c, 0, 0], (a * 7 | 0) % 3 ? .5 : .95, .08, -1, sp, 4);
+  }
+  /* the core: a cloud of stars (kind 3 twinkles), a faint shell whose rim reads as a ring, and a small yellow companion */
+  for (let i = 0; i < 2600; i++) {
+    const u = rnd(), v = rnd(), r = 1.2 + Math.pow(rnd(), 1.8) * 24, th = TAU * u, ph = Math.acos(2 * v - 1), p = [SPARK[0] + r * Math.sin(ph) * Math.cos(th), SPARK[1] + 4 + r * Math.cos(ph) * .7, SPARK[2] + r * Math.sin(ph) * Math.sin(th)];
+    const t2 = rnd(), c = t2 < .55 ? [1, .95, 1] : t2 < .8 ? [1, .55, .85] : t2 < .92 ? [1, .85, .45] : [.6, .75, 1];
+    vtx(PT, p, [0, 0, 0], c, .55 + rnd() * .45, .07 + rnd() * .1, -2, 0, 3);
+  }
+  for (let i = 0; i < 2200; i++) {
+    const u = rnd(), v = rnd(), th = TAU * u, ph = Math.acos(2 * v - 1), R = 26;
+    vtx(PT, [SPARK[0] + R * Math.sin(ph) * Math.cos(th), SPARK[1] + 4 + R * Math.cos(ph), SPARK[2] + R * Math.sin(ph) * Math.sin(th)], [0, 0, 0], [.9, .6, .85], .22, .09, -2, 0, 3);
+  }
+  /* lines: the floor grid (kind 6 takes the theme's line colour) and the adrift blocks (kind 5 turns them in the shader) */
+  for (let gz = -12; gz < ZEND; gz += 3) for (let gx = -54; gx < 54; gx += 6) { vtx(LN, [xs(gz) + gx, 0, gz], [0, 0, 0], [U_LINE, 0, 0], .55, 0, -1, 0, 6); vtx(LN, [xs(gz) + gx + 6, 0, gz], [0, 0, 0], [U_LINE, 0, 0], .55, 0, -1, 0, 6); }
+  for (let gx = -54; gx <= 54; gx += 3) for (let gz = -12; gz < ZEND; gz += 4) { vtx(LN, [xs(gz) + gx, 0, gz], [0, 0, 0], [U_LINE, 0, 0], .4, 0, -1, 0, 6); vtx(LN, [xs(gz + 4) + gx, 0, gz + 4], [0, 0, 0], [U_LINE, 0, 0], .4, 0, -1, 0, 6); }
+  const CUBE_E = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]], CV = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]];
+  for (let i = 0; i < 50; i++) {
+    const z = -10 + rnd() * (ZSP - 6), sd = rnd() < .5 ? -1 : 1, c = [xs(z) + sd * (3 + rnd() * 22), 2.5 + rnd() * 13, z], h = .2 + rnd() * .55, ph = rnd() * 9, cc = rnd() < .3 ? U_ACC : rnd() < .4 ? U_GLB : U_INK;
+    CUBE_E.forEach(([a, b]) => { vtx(LN, c, mul(CV[a], h), [cc, 0, 0], .9, 0, -1, ph, 5); vtx(LN, c, mul(CV[b], h), [cc, 0, 0], .9, 0, -1, ph, 5); });
+  }
+
+  /* ----- GL ----- */
+  const VS = `
+  attribute vec3 aPos, aOff; attribute vec4 aCol, aMisc; attribute vec2 aX;
+  uniform vec3 uE, uR, uU, uF, uAcc, uGlB, uInk, uLine; uniform vec2 uC, uHalf; uniform float uFoc, uT, uScale, uFar, uGB, uDark, uSpark;
+  uniform vec4 uTear0, uTear1, uTear2;
+  varying vec4 vC;
+  float h1(float n) { return fract(sin(n) * 43758.5453); }
+  float xs(float z) { return 7. * sin(z * .045) + 3.2 * sin(z * .11 + 1.); }
+  vec3 rotA(vec3 v, vec3 k, float a) { float c = cos(a), s = sin(a); return v * c + cross(k, v) * s + k * dot(k, v) * (1. - c); }
+  void main() {
+    vec3 p = aPos; float kind = aMisc.w, a = aCol.a, id = dot(aPos, vec3(12.989, 78.233, 37.719)) + aX.x * 9.17 + aOff.x * 3.3;
+    vec3 col = aCol.rgb;
+    if (aCol.r < -.5) col = aCol.r < -3.5 ? uLine : aCol.r < -2.5 ? uInk : aCol.r < -1.5 ? uGlB : uAcc;
+    if (kind == 1.) { float fl = fract(aPos.z * .35 - uT * 2.2 + aOff.x * .37); a *= aOff.y > .5 ? 1. : .3 + .7 * pow(fl, 6.); }
+    else if (kind == 2.) { float len = mod(aX.y, 1000.), ph = floor(aX.y / 1000.); float hd = mod(uT * aMisc.z + ph, len + 6.) - 3., q = hd - aX.x * .45; if (q < 0. || q > len) a = 0.; p = aPos + aOff * q; if (aX.x < .5) col = uInk; }
+    else if (kind == 3.) { a *= .55 + .45 * sin(uT * (1. + h1(id) * 3.) + id); }
+    else if (kind == 4.) { float an = uT * aMisc.z, c = cos(an), s = sin(an); p = aPos + vec3(aOff.x * c - aOff.z * s, aOff.y, aOff.x * s + aOff.z * c); }
+    else if (kind == 5.) { vec3 k = normalize(vec3(h1(aPos.x) - .5, h1(aPos.z) - .5, h1(aPos.y) - .5)); p = aPos + vec3(0., sin(uT * .6 + aMisc.z) * .4, 0.) + rotA(aOff, k, uT * .5 + aMisc.z); }
+    if (aMisc.y >= 0.) {                                                     // a building: scan sweep, flicker, glitch jitter
+      float band = fract(p.y * .055 - uT * .16 + aMisc.y * .21); a *= .8 + .2 * sin(uT * 23. + aMisc.y * 5.);
+      col += vec3(.5) * exp(-pow((band - .5) * 16., 2.));
+      if (abs(aMisc.y - uGB) < .5) { float f = floor(uT * 18.); p += (vec3(h1(id + f), h1(id * 1.7 + f), h1(id * 2.3 + f)) - .5) * .7 * step(.55, h1(floor(p.y * 2.) + f)); col = mix(col, h1(id + f) < .5 ? vec3(1., .2, .3) : vec3(.1, .8, 1.), .6); }
+    }
+    /* the render limit: fade with distance and with distance from the road, breaking into coarse pixels and dissolving */
+    float d = length(p - uE), lat = abs(p.x - xs(p.z)), core = aMisc.y < -1.5 ? 1. : 0.;
+    float f = (1. - smoothstep(uFar * .55, uFar, d)) * mix(1. - smoothstep(30., 50., lat), 1., core);
+    if (core > .5) a *= uSpark;
+    if (f < .999) { float g = mix(2.4, .0, f); if (g > .05) p = floor(p / g + .5) * g; }
+    if (h1(id * .913) > f) a = 0.;
+    vec3 dd = p - uE, c = vec3(dot(dd, uR), dot(dd, uU), dot(dd, uF));
+    gl_Position = vec4((uFoc * c.x + uC.x * c.z) / uHalf.x, (uFoc * c.y - uC.y * c.z) / uHalf.y, (c.z * 1000.1 - 200.) / 999.9, c.z);
+    float y = gl_Position.y / max(c.z, .001);                                // torn rows: shift whatever falls in a band, tinted
+    vec4 T[3]; T[0] = uTear0; T[1] = uTear1; T[2] = uTear2;
+    for (int i = 0; i < 3; i++) if (T[i].w > 0. && y > T[i].x && y < T[i].y) { gl_Position.x += T[i].z * c.z; col = mix(col, i == 1 ? vec3(.1, .85, 1.) : vec3(1., .2, .35), .5); }
+    gl_PointSize = clamp(aMisc.x * uFoc * uScale / max(c.z, .1), 1., 7.);
+    if (uDark < .5) { float L = dot(col, vec3(.3, .59, .11)); col = mix(col * .8, vec3(.09, .1, .16), smoothstep(.62, .95, L)); }
+    vC = uDark > .5 ? vec4(col * a, 1.) : vec4(col, a * .9);
+  }`;
+  const FS = `precision mediump float; varying vec4 vC; void main() { gl_FragColor = vC; }`;
+  function sh(type, src) { const s2 = gl.createShader(type); gl.shaderSource(s2, src); gl.compileShader(s2); if (!gl.getShaderParameter(s2, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s2)); return s2; }
+  const prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  const A = n => gl.getAttribLocation(prog, n), Uf = {};
+  ['uE', 'uR', 'uU', 'uF', 'uAcc', 'uGlB', 'uInk', 'uLine', 'uC', 'uHalf', 'uFoc', 'uT', 'uScale', 'uFar', 'uGB', 'uDark', 'uSpark', 'uTear0', 'uTear1', 'uTear2'].forEach(n => { Uf[n] = gl.getUniformLocation(prog, n); });
+  const buf = arr => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW); return { b, n: arr.length / STRIDE }; };
+  const BP = buf(PT), BL = buf(LN);
+  PT.length = 0; LN.length = 0;
+  const ATT = [['aPos', 3, 0], ['aOff', 3, 3], ['aCol', 4, 6], ['aMisc', 4, 10], ['aX', 2, 14]].map(([n, s2, o]) => [A(n), s2, o]);
+  function bind(B) { gl.bindBuffer(gl.ARRAY_BUFFER, B.b); ATT.forEach(([l, s2, o]) => { gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, s2, gl.FLOAT, false, STRIDE * 4, o * 4); }); }
+  /* ----- camera (also projected in JS for the panels, the overlay and the mini-map) ----- */
+  let W = 0, H = 0, dpr = 1, RS = .6, cam = null;
+  function look(E, Tg) { const f = unit(sub(Tg, E)), r = unit(cross([0, 1, 0], f)), u = cross(f, r); return { E, f, r, u, F: H * .95, cx: W / 2, cy: H * .52 }; }
+  const toC = p => { const d = sub(p, cam.E); return [dot(d, cam.r), dot(d, cam.u), dot(d, cam.f)]; };
+  const pj = p => { const c = toC(p); return c[2] > .1 ? [cam.cx + cam.F * c[0] / c[2], cam.cy - cam.F * c[1] / c[2], c[2]] : null; };
+
+  /* ----- timeline: scroll units t (0 .. T). The camera runs along the road (u), and near each stop it blends to a parked view
+     framing the building in two thirds of the screen. The road keys bracket each parked view, so the camera only moves forward. */
+  const TK = STOP.map((S, k) => 1.4 + k * 2.1), TSP = TK[N - 1] + 2.3, T = TSP + .25;
+  const narrow = () => W < 760 || W < H;
+  function parked(k) {
+    const S = STOP[k], s = S.s, dir = unit([s * .6, -.2, .78]), nar = narrow(), F = H * .95;
+    const hz = Math.max(S.ext[0], S.ext[2]) * .5, vt = S.ext[1] * .5;
+    const D = Math.max(12, nar ? Math.max(hz * F / (W * .4), vt * F / (H * .22)) : Math.max(hz * F / (W / 3.6), vt * F / (H * .3))) * 1.15 + hz * 1.1;
+    const E = sub(S.Tb, mul(dir, D)), r = unit(cross([0, 1, 0], dir)), u = cross(dir, r);
+    return [E, nar ? sub(S.Tb, mul(u, H * .2 * D / F)) : sub(S.Tb, mul(r, s * (W / 6) * D / F))];
+  }
+  let UK = [];
+  function keys() {
+    UK = [[0, -6], [1, 4]];
+    STOP.forEach((S, k) => { const z = parked(k)[0][2]; UK.push([TK[k] - .5, z - 4], [TK[k] + .5, z + 3]); });
+    UK.push([TSP - .7, ZSP - 18], [TSP, ZSP - 9.5], [T, ZSP - 9]);
+  }
+  function ukey(t) {
+    const K = UK, n = K.length - 1;
+    if (t <= K[0][0]) return K[0][1];
+    if (t >= K[n][0]) return K[n][1];
+    let i = 0; while (t > K[i + 1][0]) i++;
+    const M = i2 => (K[i2 + 1][1] - K[i2][1]) / (K[i2 + 1][0] - K[i2][0]), tg = i2 => (i2 <= 0 || i2 >= n ? 0 : (M(i2 - 1) * M(i2) <= 0 ? 0 : 2 * M(i2 - 1) * M(i2) / (M(i2 - 1) + M(i2))));
+    const h = K[i + 1][0] - K[i][0], u = (t - K[i][0]) / h, u2 = u * u, u3 = u2 * u;
+    return (2 * u3 - 3 * u2 + 1) * K[i][1] + (u3 - 2 * u2 + u) * h * tg(i) + (3 * u2 - 2 * u3) * K[i + 1][1] + (u3 - u2) * h * tg(i + 1);
+  }
+  const pull = (k, t) => sm(TK[k] - .8, TK[k] - .3, t) * (1 - sm(TK[k] + .3, TK[k] + .8, t));
+  const sparkW = t => sm(TSP - 1, TSP - .15, t);
+  const CORE = add(SPARK, [0, 4, 0]);
+  function camAt(t) {
+    const u = ukey(t);
+    let E = [xs(u) - (xs(u + 12) - xs(u)) * .25, 2.6, u], Tg = [xs(u + 14), 1.1, u + 14];
+    STOP.forEach((S, k) => { const w = eio(pull(k, t)); if (w > 0) { const [Ep, Tp] = parked(k); E = mixV(E, Ep, w); Tg = mixV(Tg, Tp, w); } });
+    const sw = eio(sparkW(t)); if (sw > 0) { E = mixV(E, [CORE[0] - .6, CORE[1] - .4, ZSP - 9], sw); Tg = mixV(Tg, CORE, sw); }
+    const o = 1 - eio(sm(0, 1.05, t));
+    if (o > 0) { const mid = ZEND * .42; E = mixV(E, [xs(mid) + 52, 74, mid - 70], o); Tg = mixV(Tg, [xs(mid), 0, mid + 6], o); }
+    return look(E, Tg);
+  }
+
+  /* ----- the overlays: the core's light (low resolution, like the scene) and the panels, frames and map (full resolution) ----- */
+  function coreLight(t, time) {
+    fx.setTransform(RS, 0, 0, RS, 0, 0); fx.clearRect(0, 0, W, H);
+    const p = pj(CORE); if (!p) return;
+    const A0 = (1 - sm(110, 220, p[2])) * (.25 + .75 * sparkW(t)), dark = rgb(C.ground)[0] < 128, pu = still.matches ? .5 : (Math.sin(time * 1.7) + 1) / 2;
+    if (A0 <= .01) return;
+    fx.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+    const blob = (x2, y2, r, c0, a) => { const g2 = fx.createRadialGradient(x2, y2, 0, x2, y2, r); g2.addColorStop(0, c0); g2.addColorStop(1, 'rgba(0,0,0,0)'); fx.globalAlpha = a; fx.fillStyle = g2; fx.fillRect(x2 - r, y2 - r, r * 2, r * 2); };
+    const s2 = Math.min(3, 40 / p[2]), Rn = Math.min(W, H) * .9 * Math.min(1.4, s2);
+    blob(p[0] - Rn * .3, p[1] - Rn * .1, Rn, 'rgba(150,40,110,1)', A0 * .32);              // the nebula: magenta and violet haze
+    blob(p[0] + Rn * .35, p[1] + Rn * .15, Rn * .8, 'rgba(110,40,150,1)', A0 * .26);
+    blob(p[0], p[1], Rn * .5, 'rgba(255,120,190,1)', A0 * .22);
+    blob(p[0], p[1], 90 * s2, '#ffffff', A0 * (.55 + .2 * pu));                            // the core
+    blob(p[0], p[1], 26 * s2, '#ffffff', A0);
+    fx.save(); fx.translate(p[0], p[1]); fx.scale(1, .025); blob(0, 0, W * .45, 'rgba(255,220,255,1)', A0 * .8); fx.restore();   // the lens streak
+    const y = pj(add(CORE, [5.5, -6.5, 2])); if (y) { blob(y[0], y[1], 30 * s2, 'rgba(255,200,80,1)', A0 * .8); blob(y[0], y[1], 7 * s2, '#fff6d0', A0); }
+    fx.globalCompositeOperation = 'source-over'; fx.globalAlpha = 1;
+    const cap = $('#run-sp'), sw = sparkW(t);
+    cap.style.opacity = (sw * A0).toFixed(3); cap.style.transform = 'translate(' + Math.round(p[0]) + 'px,' + Math.round(p[1] + 120 * Math.min(1, s2) + 18) + 'px) translateX(-50%)';
+  }
+  const tfCache = [];
   function glass(k, a, time) {
     const S = STOP[k], el = panels[k];
-    if (a <= .01) { el.style.opacity = '0'; el.style.visibility = 'hidden'; return; }
+    if (a <= .01) { if (tfCache[k] !== 'h') { el.style.opacity = '0'; el.style.visibility = 'hidden'; tfCache[k] = 'h'; } return; }
     const ew = el.offsetWidth, eh = el.offsetHeight, nar = narrow(), side = -S.s, Dp = 6, kk = Dp / cam.F, bob = still.matches ? 0 : Math.sin(time * 1.1 + k) * 5;
     let sx2, sy2, th;
     if (nar) { sx2 = W / 2; sy2 = H - eh / 2 - 58 + (1 - a) * 60; th = 0; }
@@ -3464,39 +3470,18 @@ const run = (() => {
     const Cw = add(add(add(cam.E, mul(cam.f, Dp)), mul(cam.r, (sx2 - cam.cx) * kk)), mul(cam.u, -(sy2 - cam.cy) * kk));
     const rp = add(mul(cam.r, Math.cos(th)), mul(cam.f, Math.sin(th))), hw = mul(rp, ew * kk / 2), hh = mul(cam.u, eh * kk / 2);
     const P = [add(sub(Cw, hw), hh), add(add(Cw, hw), hh), sub(add(Cw, hw), hh), sub(sub(Cw, hw), hh)].map(pj);
-    if (P.some(p => !p)) { el.style.visibility = 'hidden'; return; }
-    /* the pane: a faint fill, a lit frame, corner marks, and a leader line to the building */
-    x.globalAlpha = a * .42; x.fillStyle = C.ground; x.beginPath(); P.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.closePath(); x.fill();
+    if (P.some(p => !p)) return;
+    x.globalAlpha = a * .5; x.fillStyle = C.ground; x.beginPath(); P.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.closePath(); x.fill();
     x.globalAlpha = a; x.strokeStyle = C.acc; x.lineWidth = 1.2; x.stroke();
     x.lineWidth = 2.4; x.beginPath(); P.forEach((p, i) => { const q = P[(i + 1) % 4], o = P[(i + 3) % 4]; x.moveTo(p[0] + (q[0] - p[0]) * .08, p[1] + (q[1] - p[1]) * .08); x.lineTo(p[0], p[1]); x.lineTo(p[0] + (o[0] - p[0]) * .08, p[1] + (o[1] - p[1]) * .08); }); x.stroke();
     const tb = pj(S.Tb);
-    if (tb && !nar) { const e0 = side < 0 ? P[1] : P[0], e1 = side < 0 ? P[2] : P[3], m = [(e0[0] + e1[0]) / 2, (e0[1] + e1[1]) / 2]; x.globalAlpha = a * .55; x.strokeStyle = C.acc; x.lineWidth = 1; x.setLineDash([3, 4]); x.beginPath(); x.moveTo(m[0], m[1]); x.lineTo(tb[0], tb[1]); x.stroke(); x.setLineDash([]); x.fillStyle = C.acc; x.fillRect(tb[0] - 3, tb[1] - 3, 6, 6); }
+    if (tb && !nar) { const e0 = side < 0 ? P[1] : P[0], e1 = side < 0 ? P[2] : P[3], m = [(e0[0] + e1[0]) / 2, (e0[1] + e1[1]) / 2]; x.globalAlpha = a * .55; x.lineWidth = 1; x.setLineDash([3, 4]); x.beginPath(); x.moveTo(m[0], m[1]); x.lineTo(tb[0], tb[1]); x.stroke(); x.setLineDash([]); x.fillStyle = C.acc; x.fillRect(tb[0] - 3, tb[1] - 3, 6, 6); }
     const [x0, y0] = P[0], [x1, y1] = P[1], [x2, y2] = P[2], [x3, y3] = P[3];
     const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3, den = dx1 * dy2 - dx2 * dy1;
-    const g = (dx3 * dy2 - dx2 * dy3) / den, h = (dx1 * dy3 - dx3 * dy1) / den;
-    const A = x1 - x0 + g * x1, Bq = x3 - x0 + h * x3, Cq = x0, D = y1 - y0 + g * y1, E = y3 - y0 + h * y3, Fq = y0;
-    el.style.transform = 'matrix3d(' + [A / ew, D / ew, 0, g / ew, Bq / eh, E / eh, 0, h / eh, 0, 0, 1, 0, Cq, Fq, 0, 1].map(v => +v.toFixed(6)).join(',') + ')';
-    el.style.opacity = a.toFixed(3); el.style.visibility = 'visible';
-  }
-  /* the spark: a small lit sphere where the road ends, with a halo, a slow ring of motes and pulses */
-  function spark(t, time) {
-    const p = pj(SPARK); if (!p) return;
-    const R = Math.max(1.2, .2 * cam.F / p[2]), pu = still.matches ? 0 : (Math.sin(time * 2.2) + 1) / 2, A0 = 1 - sm(120, 200, p[2]);
-    const g1 = x.createRadialGradient(p[0], p[1], 0, p[0], p[1], R * 7);
-    g1.addColorStop(0, C.acc); g1.addColorStop(.18, C.acc); g1.addColorStop(1, 'rgba(0,0,0,0)');
-    x.globalAlpha = A0 * (.35 + .15 * pu); x.fillStyle = g1; x.fillRect(p[0] - R * 7, p[1] - R * 7, R * 14, R * 14);
-    const g2 = x.createRadialGradient(p[0] - R * .35, p[1] - R * .35, R * .1, p[0], p[1], R);
-    g2.addColorStop(0, '#ffffff'); g2.addColorStop(.55, '#ffffff'); g2.addColorStop(1, C.acc);
-    x.globalAlpha = A0; x.fillStyle = g2; x.beginPath(); x.arc(p[0], p[1], R, 0, TAU); x.fill();
-    for (let i = 0; i < 3; i++) {                                           // pulses running out
-      const u = ((time * .45 + i / 3) % 1); x.globalAlpha = A0 * (1 - u) * .7; x.strokeStyle = C.acc; x.lineWidth = 1.2; x.beginPath(); x.arc(p[0], p[1], R * (1.6 + u * 10), 0, TAU); x.stroke();
-    }
-    for (let i = 0; i < 26; i++) {                                          // motes on a tilted ring
-      const an = i / 26 * TAU + time * .5, q = pj([SPARK[0] + Math.cos(an) * .9, SPARK[1] + Math.sin(an) * .3, SPARK[2] + Math.sin(an) * .9]);
-      if (!q) continue; const sz = Math.max(1, 3 * 6 / q[2]); x.globalAlpha = A0 * (.4 + .6 * ((i + (time * 6 | 0)) % 5 === 0)); x.fillStyle = i % 4 ? C.ink : C.acc; x.fillRect(q[0] - sz / 2, q[1] - sz / 2, sz, sz);
-    }
-    const cap = $('#run-sp'), sw = sparkW(t);
-    cap.style.opacity = (sw * A0).toFixed(3); cap.style.transform = 'translate(' + Math.round(p[0]) + 'px,' + Math.round(p[1] + R * 12 + 14) + 'px) translateX(-50%)';
+    const g2 = (dx3 * dy2 - dx2 * dy3) / den, h = (dx1 * dy3 - dx3 * dy1) / den;
+    const Aq = x1 - x0 + g2 * x1, Bq = x3 - x0 + h * x3, Dq = y1 - y0 + g2 * y1, Eq = y3 - y0 + h * y3;
+    const tf = 'matrix3d(' + [Aq / ew, Dq / ew, 0, g2 / ew, Bq / eh, Eq / eh, 0, h / eh, 0, 0, 1, 0, x0, y0, 0, 1].map(v => +v.toFixed(4)).join(',') + ')';
+    if (tf !== tfCache[k]) { el.style.transform = tf; el.style.opacity = a.toFixed(2); el.style.visibility = 'visible'; tfCache[k] = tf; }
   }
   function minimap(t) {
     const w = 132, h = 92, ox = W - w - 18, oy = H - h - 18, zA = -10, zB = ZSP + 6, X = z => ox + 8 + (z - zA) / (zB - zA) * (w - 16), Y = v => oy + h / 2 - v * 2.2;
@@ -3504,114 +3489,66 @@ const run = (() => {
     x.strokeStyle = C.ink2; x.beginPath(); for (let z = zA; z <= zB; z += 2) { const px = X(z), py = Y(xs(z)); if (z === zA) x.moveTo(px, py); else x.lineTo(px, py); } x.stroke();
     STOP.forEach((S, k) => { x.fillStyle = pull(k, t) > .5 ? C.acc : C.ink; x.fillRect(X(S.b[2]) - 2.5, Y(S.b[0]) - 2.5, 5, 5); });
     x.fillStyle = C.acc; x.beginPath(); x.arc(X(ZSP), Y(SPARK[0]), 3.5, 0, TAU); x.fill();
-    const ex = X(cam.E[2]), ey = Y(cam.E[0]); x.fillStyle = C.acc; x.fillRect(ex - 3, ey - 3, 6, 6);
-    const fx = cam.f[2] * (w - 16) / (zB - zA), fy = -cam.f[0] * 2.2, fl = Math.hypot(fx, fy) || 1;
-    x.globalAlpha = .6; x.strokeStyle = C.acc; x.beginPath(); x.moveTo(ex, ey); x.lineTo(ex + fx / fl * 16, ey + fy / fl * 16); x.stroke();
-  }
-
-  /* ----- the home page's air: blocks adrift, lines of pixels running in all directions, glitches ----- */
-  const DRIFT = Array.from({ length: 46 }, () => { const z = -10 + rnd() * (ZEND + 10), sd = rnd() < .5 ? -1 : 1; return { p: [xs(z) + sd * (3 + rnd() * 22), 2.5 + rnd() * 13, z], h: .2 + rnd() * .55, w: [rnd() - .5, rnd() - .5, rnd() - .5], ph: rnd() * 9, c: rnd() < .25 ? 'acc' : rnd() < .3 ? 'glB' : 'ink2' }; });
-  const STREAMS = Array.from({ length: 58 }, () => {
-    const z = -10 + rnd() * (ZEND + 10), sd = rnd() < .5 ? -1 : 1, kind = rnd();
-    const d = kind < .4 ? [0, -1, 0] : kind < .6 ? [0, 1, 0] : kind < .8 ? [0, 0, 1] : [sd, 0, 0];
-    return { o: [xs(z) + sd * (2.5 + rnd() * 26), rnd() * 14, z], d, v: 1.5 + rnd() * 4, n: 5 + (rnd() * 10 | 0), len: 10 + rnd() * 10, ph: rnd() * 20, c: rnd() < .3 ? 'acc' : rnd() < .5 ? 'glB' : 'ink2' };
-  });
-  const rot3 = (v, w, a) => { const k = unit(w), c = Math.cos(a), s2 = Math.sin(a), d = dot(k, v); return add(add(mul(v, c), mul(cross(k, v), s2)), mul(k, d * (1 - c))); };
-  function driftParts(time) {                                               // the adrift blocks, as meshes for the painter's sort
-    const out = [];
-    DRIFT.forEach(b => {
-      const c = add(b.p, [0, Math.sin(time * .6 + b.ph) * .4, 0]), a = (still.matches ? 0 : time) * .5 + b.ph;
-      const V = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]].map(v => add(c, rot3(mul(v, b.h), b.w, a)));
-      const F = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [2, 3, 7, 6], [1, 2, 6, 5], [0, 4, 7, 3]].map(ix => { const pts = ix.map(i => V[i]); let n = unit(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0]))); if (dot(n, sub(pts[0], c)) < 0) n = mul(n, -1); return { pts, n, col: PAL.black, edge: b.c, ea: .9 }; });
-      out.push({ F, L: [], c, r: b.h * 1.8 });
-    });
-    return out;
-  }
-  function streams(time) {
-    const tm = still.matches ? 0 : time;
-    STREAMS.forEach(s2 => {
-      const head = ((tm * s2.v + s2.ph) % (s2.len + 6)) - 3, col2 = C[s2.c];
-      for (let m = 0; m < s2.n; m++) {
-        const q = head - m * .45; if (q < 0 || q > s2.len) continue;
-        const p = pj(add(s2.o, mul(s2.d, q))); if (!p || p[2] > 110) continue;
-        const sz = Math.max(1.2, Math.min(5, 4.5 * 8 / p[2])); x.globalAlpha = (1 - m / s2.n) * (1 - sm(60, 110, p[2])) * .85; x.fillStyle = m ? col2 : C.ink; x.fillRect(p[0] - sz / 2, p[1] - sz / 2, sz, sz);
-      }
-    });
-  }
-  const hsh = (a, b) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
-  let glitchObj = null;
-  function glitchState(time) {                                              // a short burst every couple of seconds
-    const slot = Math.floor(time / 1.7), u = time - slot * 1.7, on = !still.matches && u < .22;
-    glitchObj = on ? slot : null;
-    return on ? { slot, f: (time * 24) | 0 } : null;
-  }
-  function tearRows(G) {                                                    // torn rows with a red/cyan split, and a few displaced blocks
-    for (let n = 0; n < 5; n++) {
-      const y = (.18 + .64 * hsh(n, G.slot)) * H, h = 3 + hsh(n + 9, G.f) * 26, dx = (hsh(n + 20, G.f) - .5) * 70;
-      x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.drawImage(cvR, 0, y * dpr, cvR.width, h * dpr, dx * dpr, y * dpr, cvR.width, h * dpr); x.restore();
-      x.globalAlpha = .7; x.fillStyle = n % 2 ? C.glA : C.glB; x.fillRect(hsh(n + 31, G.f) * W * .7, y + h, W * .25 * hsh(n + 40, G.f), 2);
-    }
-    for (let n = 0; n < 4; n++) {
-      const bw = 20 + hsh(n + 50, G.slot) * 90, bh = 8 + hsh(n + 60, G.slot) * 40, bx = hsh(n + 70, G.slot) * (W - bw), by = (.2 + .6 * hsh(n + 80, G.slot)) * H, ox = (hsh(n + 90, G.f) - .5) * 40;
-      x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(cvR, bx * dpr, by * dpr, bw * dpr, bh * dpr, (bx + ox) * dpr, by * dpr, bw * dpr, bh * dpr); x.restore();
-    }
-  }
-  let PAT = null;
-  function pat() {                                                          // the digital texture laid over the meshes: a pixel grid with a scan line
-    if (PAT) return PAT;
-    const c = document.createElement('canvas'); c.width = c.height = 4; const q = c.getContext('2d');
-    q.fillStyle = 'rgba(0,0,0,.55)'; q.fillRect(0, 0, 1, 1); q.fillRect(2, 2, 1, 1); q.fillStyle = 'rgba(255,255,255,.22)'; q.fillRect(0, 3, 4, 1);
-    return (PAT = x.createPattern(c, 'repeat'));
+    const ex = X(cam.E[2]), ey = Y(cam.E[0]); x.fillRect(ex - 3, ey - 3, 6, 6);
+    const fx2 = cam.f[2] * (w - 16) / (zB - zA), fy = -cam.f[0] * 2.2, fl = Math.hypot(fx2, fy) || 1;
+    x.globalAlpha = .6; x.strokeStyle = C.acc; x.beginPath(); x.moveTo(ex, ey); x.lineTo(ex + fx2 / fl * 16, ey + fy / fl * 16); x.stroke();
   }
 
   /* ----- scroll, warp, loop ----- */
-  let tNow = 0, tGoal = 0, raf = 0, last = 0, onScreen = false, warp = 0, vel = 0, active = -1;
+  let tNow = 0, raf = 0, last = 0, onScreen = false, warp = 0, vel = 0, active = -1;
   const span = () => sec.offsetHeight - box.offsetHeight;
   const tOf = () => { const r = sec.getBoundingClientRect(), top = hdr.getBoundingClientRect().bottom; return cl((top - r.top) / Math.max(1, span())) * T; };
+  const hsh = (a, b) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
   function size() {
     dpr = Math.min(2, devicePixelRatio || 1); W = box.clientWidth; H = box.clientHeight;
-    cvR.width = Math.round(W * dpr); cvR.height = Math.round(H * dpr);
-    const pw = W < 760 || W < H ? Math.round(W * .88) : Math.round(cl(W * .29, 300, 470));
-    panels.forEach(el => { el.style.width = pw + 'px'; });
+    RS = Math.min(.62, Math.sqrt(650000 / Math.max(1, W * H)));                // the scene's resolution: chunky on purpose, and capped
+    glc.width = Math.round(W * RS); glc.height = Math.round(H * RS); fxc.width = glc.width; fxc.height = glc.height;
+    uic.width = Math.round(W * dpr); uic.height = Math.round(H * dpr);
+    gl.viewport(0, 0, glc.width, glc.height);
+    const pw = narrow() ? Math.round(W * .88) : Math.round(cl(W * .29, 300, 470));
+    panels.forEach((el, k) => { el.style.width = pw + 'px'; tfCache[k] = ''; });
     keys(); kick();
   }
+  const v3 = c => rgb(c).map(v => v / 255);
   function frame(now) {
     raf = 0;
     const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now;
-    tGoal = tOf();
-    const prev = tNow; tNow = still.matches ? tGoal : tNow + (tGoal - tNow) * Math.min(1, dt * 5.5);
+    const goal = tOf(), prev = tNow; tNow = still.matches ? goal : tNow + (goal - tNow) * Math.min(1, dt * 5.5);
     vel = mix(vel, Math.abs(tNow - prev) / Math.max(.001, dt), .2);
     cam = camAt(tNow);
-    x.setTransform(dpr, 0, 0, dpr, 0, 0); x.globalAlpha = 1; x.fillStyle = C.ground; x.fillRect(0, 0, W, H);
-    const dist = tNow < 1 ? 260 : 150, time = now / 1000;
-    sky(dist); road(tNow, time);
-    const GL = glitchState(time);
-    if (GL) { const bk = hsh(GL.slot, 7) * N | 0; BLD.forEach((b, k) => b.parts.forEach(p => p.F.forEach(f => { f.g = k === bk ? GL.slot : null; }))); }
-    const objs = [];
-    BLD.forEach(b => objs.push(...b.parts));
-    FILL.forEach(b => { const c = toC(b.c); if (c[2] > -14 && c[2] < dist + 10) objs.push(...b.parts); });
-    objs.push(...driftParts(time));
-    drawParts(objs, dist);
-    extras(time); streams(time); spark(tNow, time);
-    if (GL) tearRows(GL);
-    x.globalAlpha = .045; x.fillStyle = C.ink; for (let y = 0; y < H; y += 3) x.fillRect(0, y, W, 1);   // faint scan lines over everything
+    const time = still.matches ? 0 : now / 1000, dark = rgb(C.ground)[0] < 128, G = v3(C.ground);
+    /* the scene */
+    gl.clearColor(G[0], G[1], G[2], 1); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.enable(gl.BLEND); if (dark) gl.blendFunc(gl.ONE, gl.ONE); else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.uniform3fv(Uf.uE, cam.E); gl.uniform3fv(Uf.uR, cam.r); gl.uniform3fv(Uf.uU, cam.u); gl.uniform3fv(Uf.uF, cam.f);
+    gl.uniform3fv(Uf.uAcc, v3(C.acc)); gl.uniform3fv(Uf.uGlB, v3(C.glB)); gl.uniform3fv(Uf.uInk, v3(C.ink)); gl.uniform3fv(Uf.uLine, v3(C.line));
+    gl.uniform2f(Uf.uC, cam.cx - W / 2, cam.cy - H / 2); gl.uniform2f(Uf.uHalf, W / 2, H / 2);
+    gl.uniform1f(Uf.uFoc, cam.F); gl.uniform1f(Uf.uT, time); gl.uniform1f(Uf.uScale, RS); gl.uniform1f(Uf.uFar, tNow < 1 ? 280 : 120);
+    gl.uniform1f(Uf.uDark, dark ? 1 : 0); gl.uniform1f(Uf.uSpark, .35 + .65 * sm(TSP - 3, TSP - .5, tNow));
+    const slot = Math.floor(time / 1.7), gOn = !still.matches && time - slot * 1.7 < .22, f = (time * 24) | 0;   // a glitch burst every 1.7 s
+    gl.uniform1f(Uf.uGB, gOn ? (hsh(slot, 7) * N | 0) : -9);
+    ['uTear0', 'uTear1', 'uTear2'].forEach((n, i) => { const y0 = (hsh(i, slot) - .5) * 1.4, hh = .01 + hsh(i + 9, f) * .06; gl.uniform4f(Uf[n], y0, y0 + hh, (hsh(i + 20, f) - .5) * .12, gOn ? 1 : 0); });
+    bind(BL); gl.drawArrays(gl.LINES, 0, BL.n);
+    bind(BP); gl.drawArrays(gl.POINTS, 0, BP.n);
+    coreLight(tNow, time);
+    /* the panels and the HUD */
+    x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
     let best = -1, bw = 0;
     STOP.forEach((S, k) => { const a = pull(k, tNow); glass(k, sm(.05, .6, a), time); if (a > bw) { bw = a; best = k; } });
     const near = sparkW(tNow) > .5 ? N : bw > .5 ? best : -1;
     if (near !== active) {
       active = near;
       ticks.forEach((b, i) => { if (i === active) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
-      hudN.textContent = active < 0 ? '—' : '0' + (active + 1) + ' / 0' + N;
       hudN.textContent = active < 0 ? '—' : active === N ? '∞' : '0' + (active + 1) + ' / 0' + N;
       if (active < 0 || active === N) { const key = active === N ? 'run.sp' : 'run.k'; hudT.dataset.i18n = key; hudT.textContent = tr(key); }
       else { hudT.removeAttribute('data-i18n'); hudT.textContent = panels[active].querySelector('h3').textContent; }
     }
     if (W > 520) minimap(tNow);
-    const ws = Math.max(warp, cl((vel - 1.5) / 6));                          // speed lines while warping or scrolling fast
+    const ws = Math.max(warp, cl((vel - 1.5) / 6));
     if (ws > .02) {
       x.lineWidth = 1.4;
-      for (let i = 0; i < 70; i++) {
-        const an = (i * 2.399) % TAU, u = (time * 2.2 + (i * .618) % 1) % 1, r0 = (60 + u * Math.max(W, H) * .7), len = 40 + ws * 260 * u;
+      for (let i = 0; i < 60; i++) {
+        const an = (i * 2.399) % TAU, u = (now / 1000 * 2.2 + (i * .618) % 1) % 1, r0 = 60 + u * Math.max(W, H) * .7, len = 40 + ws * 260 * u;
         x.globalAlpha = ws * Math.sin(u * Math.PI) * .8; x.strokeStyle = i % 4 ? C.ink2 : C.acc;
         x.beginPath(); x.moveTo(W / 2 + Math.cos(an) * r0, H * .52 + Math.sin(an) * r0); x.lineTo(W / 2 + Math.cos(an) * (r0 + len), H * .52 + Math.sin(an) * (r0 + len)); x.stroke();
       }
@@ -3619,7 +3556,7 @@ const run = (() => {
     if (onScreen && current === 'about' && !document.hidden) raf = requestAnimationFrame(frame);
   }
   function kick() { if (!raf && onScreen) { last = performance.now(); raf = requestAnimationFrame(frame); } }
-  function warpTo(k) {                                                      // fly to stop k: an eased scroll with speed lines
+  function warpTo(k) {
     const goal = sec.getBoundingClientRect().top + scrollY - hdr.getBoundingClientRect().bottom + ((k >= N ? T : TK[k]) / T) * span(), from = scrollY;
     if (still.matches) { scrollTo({ top: goal, behavior: 'instant' }); return; }
     const t0 = performance.now(), dur = Math.min(1900, 700 + Math.abs(goal - from) / 6);
