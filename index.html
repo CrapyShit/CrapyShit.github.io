@@ -745,7 +745,7 @@ const T = {
     'vault.1': 'Archive', 'vault.2': 'Searching', 'vault.3': 'Match', 'vault.4': 'Release', 'vault.5': '{cast} online',
     'bloom.1': 'Signal', 'bloom.2': 'Rain', 'bloom.3': 'Notice', 'bloom.4': 'Chosen', 'bloom.5': '{cast} online',
     'gimbal.1': 'Three rings', 'gimbal.2': 'Gimbal lock', 'gimbal.3': 'Four dimensions', 'gimbal.4': 'One rotation', 'gimbal.5': '{cast} online',
-    'matrix.1': 'Basis', 'matrix.2': 'Order matters', 'matrix.3': 'Determinant', 'matrix.4': 'Hierarchy', 'matrix.5': '{cast} online',
+    'matrix.1': 'Space', 'matrix.2': 'Transform', 'matrix.3': 'Multiply', 'matrix.4': 'Chain', 'matrix.5': '{cast} online',
     'side.slot': 'Detail loop slot, 1:1', 'side.works': 'Works in',
     'inside.lede': 'Scroll to take the character apart, in the order a rig is built.',
     's1': 'Shaded', 's2': 'Wireframe', 's3': 'Skeleton', 's4': 'Controls',
@@ -783,7 +783,7 @@ const T = {
     'vault.1': 'アーカイブ', 'vault.2': '検索中', 'vault.3': '一致', 'vault.4': '解放', 'vault.5': '{cast} 起動',
     'bloom.1': '信号', 'bloom.2': '雨', 'bloom.3': '気づき', 'bloom.4': '選ばれた一輪', 'bloom.5': '{cast} 起動',
     'gimbal.1': '三つの輪', 'gimbal.2': 'ジンバルロック', 'gimbal.3': '四次元', 'gimbal.4': 'ひとつの回転', 'gimbal.5': '{cast} 起動',
-    'matrix.1': '基底', 'matrix.2': '順序', 'matrix.3': '行列式', 'matrix.4': '階層', 'matrix.5': '{cast} 起動',
+    'matrix.1': '空間', 'matrix.2': '変換', 'matrix.3': '乗算', 'matrix.4': '連鎖', 'matrix.5': '{cast} 起動',
     'side.slot': 'ディテールループ枠 1:1', 'side.works': '使用ツール',
     'inside.lede': 'スクロールすると、リグを組む順番でキャラクターが分解されていきます。',
     's1': 'シェーディング', 's2': 'ワイヤーフレーム', 's3': 'スケルトン', 's4': 'コントローラー',
@@ -2394,48 +2394,80 @@ const lore = (() => {
     return cl((t - 12.75) / .9);
   }
   /* ===== intro 5: matrix =====
-     Linear algebra first, then the rig. A grid and its two basis vectors, X red and Y green: the matrix's columns are where they land,
-     and every grid line follows. Shear then rotate, against rotate then shear: the order changes the result (S·R ≠ R·S).
-     The unit square's area is the determinant: it stretches, the eigenvector lines only scale, it squashes flat (det 0) and flips (det < 0).
-     Then the figure's skeleton is built joint by joint, each joint's axes carried out from its parent (world = parent · local), with the
-     4x4 world matrix of the arm chain in the read-out. Last, the grid straightens, scales to the page's column width and lands on the
-     page's own lines, and the figure scans in. */
-  const M_END = 13.8, MBEAT = [0, 2.4, 4.8, 7.2, 10.8];
-  const mI = [1, 0, 0, 1], mS = [1, .8, 0, 1], mA = [1.6, .6, .6, .9], mZ = [1.6, .6, .8, .3], mF = [1.6, .6, 1, -.25];
-  const mRot = a => [Math.cos(a), -Math.sin(a), Math.sin(a), Math.cos(a)];
-  const mLerp = (A, B, k) => A.map((v, i) => mix(v, B[i], k));
-  const mMul = (A, B) => [A[0] * B[0] + A[1] * B[2], A[0] * B[1] + A[1] * B[3], A[2] * B[0] + A[3] * B[2], A[2] * B[1] + A[3] * B[3]];
-  const M_TH = 1.05, mSR = mMul(mS, mRot(M_TH)), mRS = mMul(mRot(M_TH), mS);
-  function mat2(t) {                                                       // [a b; c d], row by row: columns (a, c) and (b, d) are where X and Y land
-    if (t < 2.45) return mLerp(mI, mS, eio(st(.9, 1.5, t)) - eio(st(2.0, 2.4, t)));
-    if (t < 3.6) return mMul(mLerp(mI, mS, eio(st(3.05, 3.55, t))), mRot(M_TH * eio(st(2.5, 3.0, t))));   // R first, then S on top: S·R
-    if (t < 3.88) return mLerp(mSR, mI, eio(st(3.6, 3.85, t)));
-    if (t < 4.85) return mMul(mRot(M_TH * eio(st(4.3, 4.75, t))), mLerp(mI, mS, eio(st(3.9, 4.25, t))));   // S first, then R: R·S
-    if (t < 5.95) return mLerp(mRS, mA, eio(st(4.9, 5.4, t)));
-    if (t < 6.5) return mLerp(mA, mZ, eio(st(5.95, 6.45, t)));
-    if (t < 7.0) return mLerp(mZ, mF, eio(st(6.5, 6.95, t)));
-    return mLerp(mF, mI, eio(st(7.05, 7.5, t)));
+     After 3Blue1Brown's linear transformations and the "mm" matmul visualiser. All in 3D, through a perspective camera.
+     1. Space: a cube of arrows from the origin to every lattice point, coloured by direction, with X, Y, Z.
+     2. Transform: a 3x3 matrix bends the whole field (the read-out shows it live); the cube's volume is the determinant:
+        it squashes flat (det 0) and turns inside out (det < 0).
+     3. Multiply: A (16x16) on the left wall, B on the floor; each cell of A·B is the dot product of a row of A and a column of B,
+        a line of light through the cube; the result fills the front face in a diagonal wave.
+     4. Chain: the cells of A·B fly off and become the left wall of a second cube, C goes on its floor, and A·B·C fills its face:
+        the way a rig chain multiplies parent and local matrices.
+     5. Online: the camera flies square onto A·B·C until four of its cells are one page column; its lines land on the page's own lines. */
+  const M_END = 13.8, MBEAT = [0, 2.8, 5.6, 8.6, 11.2], MN = 16, MC = 2 / MN, M_X2 = 3.2, MG = .32;   // MG: the gap the three matrices stand off the cube (exploded view)
+  const m3mul = (M, v) => [M[0] * v[0] + M[1] * v[1] + M[2] * v[2], M[3] * v[0] + M[4] * v[1] + M[5] * v[2], M[6] * v[0] + M[7] * v[1] + M[8] * v[2]];
+  const m3det = M => M[0] * (M[4] * M[8] - M[5] * M[7]) - M[1] * (M[3] * M[8] - M[5] * M[6]) + M[2] * (M[3] * M[7] - M[4] * M[6]);
+  const L3I = [1, 0, 0, 0, 1, 0, 0, 0, 1], L3A = [1.15, .5, 0, .55, 1.3, .45, -.35, .25, .85];
+  const L3Z = [L3A[0], L3A[1], L3A[2], L3A[3], L3A[4], L3A[5], L3A[0] + L3A[3], L3A[1] + L3A[4], L3A[2] + L3A[5]];   // row 3 = row 1 + row 2: flat
+  const L3F = [L3A[0], L3A[1], L3A[2], L3A[3], L3A[4], L3A[5], -L3A[6], -L3A[7], -L3A[8]];                          // row 3 negated: inside out
+  const m3l = (A, B, k) => A.map((v, i) => mix(v, B[i], k));
+  function mat3(t) {
+    if (t < 4.1) return m3l(L3I, L3A, eio(st(2.9, 3.6, t)));
+    if (t < 4.65) return m3l(L3A, L3Z, eio(st(4.1, 4.6, t)));
+    if (t < 5.15) return m3l(L3Z, L3F, eio(st(4.7, 5.1, t)));
+    return m3l(L3F, L3I, eio(st(5.2, 5.6, t)));
   }
-  /* the skeleton: parents, depth and each joint's axes (X down the bone, as on the skeleton view) */
-  const MPAR = {}, MKID = {}, MDEP = { hip: 0 };
-  BN.forEach(([a, b]) => { MPAR[b] = a; (MKID[a] = MKID[a] || []).push(b); });
-  const mDep = j => (MDEP[j] != null ? MDEP[j] : (MDEP[j] = mDep(MPAR[j]) + 1));
-  const MJ = Object.keys(JN).filter(j => j === 'hip' || MPAR[j]), MAX = {};
-  MJ.forEach(j => {
-    const k = MKID[j] ? MKID[j][0] : null, x = k ? unit(sub(JN[k], JN[j])) : unit(sub(JN[j], JN[MPAR[j]])), up = Math.abs(x[2]) < .9 ? [0, 0, 1] : [1, 0, 0], y = unit(cross(up, x));
-    MAX[j] = [x, y, cross(x, y)]; mDep(j);
-  });
-  const MARM = ['hip', 'sp1', 'sp2', 'chest', 'shL', 'elL', 'wrL', 'haL'];
-  const MNAME = { hip: 'HIP', sp1: 'SPINE_1', sp2: 'SPINE_2', chest: 'CHEST', shL: 'SHOULDER_L', elL: 'ELBOW_L', wrL: 'WRIST_L', haL: 'HAND_L' };
-  const mT0 = j => 7.45 + MDEP[j] * .33;
-  function mJoint(j, t, memo) {                                            // [position, axes, how far it has come out of its parent]
-    if (memo[j]) return memo[j];
-    if (j === 'hip') return (memo[j] = [JN.hip, MAX.hip, eo(st(7.3, 7.6, t))]);
-    const u = eio(cl((t - mT0(j)) / .33)), P = mJoint(MPAR[j], t, memo);
-    if (u <= 0) return (memo[j] = [P[0], P[1], 0]);
-    return (memo[j] = [JN[j].map((c, n) => mix(P[0][n], c, u)), MAX[j].map((v, i) => unit(v.map((c, n) => mix(P[1][i][n], c, u)))), u]);
+  /* the field: arrows to the 5x5x5 lattice */
+  const MFIELD = [];
+  for (let a = -2; a <= 2; a++) for (let b = -2; b <= 2; b++) for (let c = -2; c <= 2; c++) if (a || b || c) MFIELD.push([a / 2, b / 2, c / 2]);
+  const MCUBE_E = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
+  const MCUBE_V = [[-1, -1, -1], [1, -1, -1], [-1, 1, -1], [1, 1, -1], [-1, -1, 1], [1, -1, 1], [-1, 1, 1], [1, 1, 1]];
+  /* the matrices, as signs (stripes, so the products come out as checks and bands you can read) */
+  const MA = [], MB = [], MCm = [], MAB = [], MABC = [];
+  for (let i = 0; i < MN; i++) { MA.push([]); MB.push([]); MCm.push([]); for (let j = 0; j < MN; j++) { MA[i].push((i >> 2) & 1 ? 1 : -1); MB[i].push((j >> 2) & 1 ? 1 : -1); MCm[i].push(((i + 2 * j) >> 2) & 1 ? 1 : -1); } }
+  for (let i = 0; i < MN; i++) { MAB.push([]); MABC.push([]); for (let j = 0; j < MN; j++) { let s = 0; for (let k = 0; k < MN; k++) s += MA[i][k] * MB[k][j]; MAB[i].push(s / MN); } }
+  let mMax = 0;
+  for (let i = 0; i < MN; i++) for (let j = 0; j < MN; j++) { let s = 0; for (let k = 0; k < MN; k++) s += MAB[i][k] * MCm[k][j]; MABC[i].push(s); mMax = Math.max(mMax, Math.abs(s)); }
+  for (let i = 0; i < MN; i++) for (let j = 0; j < MN; j++) MABC[i][j] /= mMax || 1;
+  let MCT = [0, 0, 0];
+  const mp = v => qp(sub(v, MCT));                                           // the scene through the camera, around a moving centre
+  function mcell(c, ax, ay, val, al, lit) {                                // one matrix cell: a small quad, red for +, cyan for -
+    const k = .43, p = [add(add(c, mul(ax, k)), mul(ay, k)), add(sub(c, mul(ay, k)), mul(ax, k)), sub(sub(c, mul(ax, k)), mul(ay, k)), add(sub(c, mul(ax, k)), mul(ay, k))].map(mp);
+    if (p.some(q => !q)) return;
+    poly(p); g.globalAlpha = al * (.14 + .42 * Math.abs(val)); g.fillStyle = lit ? C.ink : val >= 0 ? C.glA : C.glB; g.fill();
   }
-  const sproj = (G, v) => { const e = ry(v, G.th); return [G.ox + e[0] * G.S, G.oy - (e[1] * CP - e[2] * SP) * G.S]; };   // the stage's own camera
+  function mlabel(v, s, al, size = 22) { const p = mp(v); if (p && al > .01) text(s, p[0], p[1], C.ink, al, 'center', size); }
+  function msweepFace(G, t, t0, t1, left, right, out, frame, al, appear) {   // one multiply: left wall (i, k), floor (k, j), front face (i, j)
+    const { o } = frame, X = [MC, 0, 0], Yd = [0, -MC, 0], Z = [0, 0, MC];
+    const at = (j, i, k) => add(o, [(j + .5) * MC, -(i + .5) * MC, (k + .5) * MC]);   // cube corner o = (left, top, back); walls stand off by MG
+    const prog = st(t0, t1, t), wave = (i, j) => (i + j) / (2 * MN - 2);
+    /* the cube's edges */
+    g.lineWidth = 1; g.strokeStyle = C.ink2;
+    const cv8 = MCUBE_V.map(v => add(o, [v[0] + 1, v[1] - 1, v[2] + 1]));
+    MCUBE_E.forEach(([a, b]) => { const p = mp(cv8[a]), q = mp(cv8[b]); if (p && q) { g.globalAlpha = al * .5 * appear; seg(p, q); } });
+    if (left) for (let i = 0; i < MN; i++) for (let k = 0; k < MN; k++) {   // left wall x = o.x: rows down, k into depth
+      const a = st(0, .5, appear * 1.6 - i / MN * .6); if (a <= 0) continue;
+      mcell(add(o, [-MG, -(i + .5) * MC, (k + .5) * MC]), Z, Yd, left[i][k], al * a);
+    }
+    if (right) for (let k = 0; k < MN; k++) for (let j = 0; j < MN; j++) {  // floor y = o.y - 2: k into depth, j across
+      const a = st(0, .5, appear * 1.6 - j / MN * .6 - .25); if (a <= 0) continue;
+      mcell(add(o, [(j + .5) * MC, -2 - MG, (k + .5) * MC]), X, Z, right[k][j], al * a);
+    }
+    if (prog > 0) {
+      const lines = [];
+      for (let i = 0; i < MN; i++) for (let j = 0; j < MN; j++) {
+        const w = wave(i, j), d = prog * 1.08 - w;
+        if (d < 0) continue;
+        mcell(add(o, [(j + .5) * MC, -(i + .5) * MC, 2 + MG]), X, Yd, out[i][j], al, d < .05);
+        if (d < .07) lines.push([i, j, 1 - d / .07]);
+      }
+      lines.forEach(([i, j, f]) => {                                      // the dot product: a line of light along k, with the row and column it reads
+        const a = mp(at(j, i, -.5)), b = mp(add(at(j, i, MN - .5), [0, 0, MG + MC / 2])), ra = mp(add(o, [-MG, -(i + .5) * MC, 1])), rb = mp(add(o, [(j + .5) * MC, -2 - MG, 1]));
+        if (!a || !b) return;
+        g.globalAlpha = al * f * .8; g.strokeStyle = C.acc; g.lineWidth = 1.3; seg(a, b);
+        if (ra && rb && f > .7) { g.globalAlpha = al * (f - .7) * 2; g.strokeStyle = C.ink2; g.lineWidth = 1; seg(ra, a); seg(rb, a); }
+      });
+    }
+  }
   function marrow(a, b, col, al, w = 2.4) {
     const ang = Math.atan2(b[1] - a[1], b[0] - a[0]), h = 9;
     g.globalAlpha = al; g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w; seg(a, [b[0] - Math.cos(ang) * h * .6, b[1] - Math.sin(ang) * h * .6]);
@@ -2456,106 +2488,105 @@ const lore = (() => {
   function matrixIntro(G, t) {
     fadeWorld(G, t + 14, st(12.4, 13.6, t));
     if (t >= M_END) return 1;
-    const A = st(-.35, .05, t), R0 = Math.min(G.S * .46, cw * .34), u0 = R0 * .5, O = G.A, M = mat2(t), det = M[0] * M[3] - M[1] * M[2];
-    const N = Math.ceil(Math.max(cw, ch) / u0) + 2;
-    const sc = (x, y, MM = M, OO = O, uu = u0) => [OO[0] + uu * (MM[0] * x + MM[1] * y), OO[1] - uu * (MM[2] * x + MM[3] * y)];
-    const flick = t < .8 && (t * 20 | 0) % 3 === 0 ? .35 : 1, rules = t > 10.4 ? qrules() : null;
+    const A = st(-.35, .05, t), R0 = Math.min(G.S * .46, cw * .34);
+    /* the centre moves from the field to the first cube, then to the second; the camera orbits, then flies square onto A·B·C */
+    MCT = [mix(mix(0, M_X2 / 2, eio(st(8.5, 9.4, t))), M_X2, eio(st(11, 12, t))), 0, 0];
+    const Rz = R0 * mix(mix(1, .78, eio(st(5.5, 6.2, t))), .58, eio(st(8.5, 9.4, t)));
+    const V0 = qorbit(G.A[0], G.A[1], Rz, -.62 + .1 * t + .45 * eio(st(5.4, 6.6, t)), mix(.36, .5, eio(st(5.4, 6.6, t))), .17), k2 = eio(st(11, 12, t));
+    let fin = null;
+    if (k2 > 0) {
+      const c = cv.getBoundingClientRect(), rr = reveal.getBoundingClientRect(), wide2 = wide.matches;
+      const W2 = wide2 ? rr.width : cw * .9, L2 = wide2 ? rr.left - c.left : cw * .05, T2 = wide2 ? rr.top - c.top : ch * .2;
+      const D = 6, s = W2 / 2, E1 = [0, 0, 1 + MG + D];                    // in the moving centre's frame the face A·B·C is centred at (0, 0, 1 + MG)
+      fin = { s, L2, T2, W2 };
+      const E = [mix(V0.E[0], E1[0], k2), mix(V0.E[1], E1[1], k2), mix(V0.E[2], E1[2], k2)];
+      const cam = { E, f: unit([mix(V0.f[0], 0, k2), mix(V0.f[1], 0, k2), mix(V0.f[2], -1, k2)]) };
+      cam.r = unit(cross(cam.f, [mix(V0.u[0], 0, k2), mix(V0.u[1], 1, k2), mix(V0.u[2], 0, k2)])); cam.u = cross(cam.r, cam.f);
+      cam.z0 = -dot3(E, cam.f);
+      const FC = [0, 0, 1 + MG], zf = dot3(sub(FC, E), cam.f), zf0 = dot3(sub(FC, V0.E), V0.f), pv = qp(FC, V0);
+      cam.F = mix(V0.F / zf0, s, k2) * zf;                                   // pixels per unit at the face: from the orbit's to the page's
+      const ax = mix(pv[0], L2 + s, k2), ay = mix(pv[1], T2 + s, k2);         // where the face's centre lands
+      cam.x = ax - cam.F * dot3(sub(FC, E), cam.r) / zf; cam.y = ay + cam.F * dot3(sub(FC, E), cam.u) / zf;
+      Object.assign(QV, cam);
+    } else Object.assign(QV, V0);
 
-    /* beats 1-4: the plain grid behind, the transformed grid on top; it dims while the skeleton is built */
-    if (t < 11) {
-      const ga = A * flick * st(0, .5, t) * mix(1, .35, st(7.2, 7.7, t) * (1 - st(10.5, 10.95, t))), lim = N * st(0, .7, t);
+    /* 1-2: the field, bent by the 3x3 */
+    const fa = A * st(0, .6, t) * (1 - st(5.6, 6.1, t)), M = mat3(t), det = m3det(M);
+    if (fa > 0) {
+      const grow = eo(st(.1, .9, t)), o = mp([0, 0, 0]);
       g.lineWidth = 1;
-      for (let k = -N; k <= N; k++) {
-        if (Math.abs(k) > lim) continue;
-        g.globalAlpha = ga * .45; g.strokeStyle = C.line; seg(sc(k, -N, mI), sc(k, N, mI)); seg(sc(-N, k, mI), sc(N, k, mI));
-        g.globalAlpha = ga * (k ? .55 : .9); g.strokeStyle = k ? C.ink2 : C.ink; g.lineWidth = k ? 1 : 1.4;
-        seg(sc(k, -N), sc(k, N)); seg(sc(-N, k), sc(N, k)); g.lineWidth = 1;
-      }
-    }
-
-    /* the unit square (its area is the determinant), the ghosts of S·R and R·S, the eigenvector lines, the two basis vectors */
-    const va = A * st(.35, .75, t) * (1 - st(7.1, 7.5, t));
-    if (va > 0) {
-      const ghost = (MM, lab, a) => {
-        if (a <= 0) return;
-        poly([sc(0, 0, MM), sc(1, 0, MM), sc(1, 1, MM), sc(0, 1, MM)]); g.globalAlpha = a; g.strokeStyle = C.ink2; g.setLineDash([4, 4]); g.lineWidth = 1.2; g.stroke(); g.setLineDash([]);
-        const c = sc(.5, .5, MM); text(lab, c[0], c[1], C.ink, a, 'center', 12);
-      };
-      ghost(mSR, 'S·R', va * st(3.55, 3.7, t) * (1 - st(4.9, 5.25, t)));
-      ghost(mRS, 'R·S', va * st(4.72, 4.8, t) * (1 - st(4.9, 5.25, t)));
-      poly([sc(0, 0), sc(1, 0), sc(1, 1), sc(0, 1)]);
-      g.globalAlpha = va * .2; g.fillStyle = det < 0 ? C.glA : C.acc; g.fill(); g.globalAlpha = va; g.strokeStyle = det < 0 ? C.glA : C.acc; g.lineWidth = 1.5; g.stroke();
-      if (t > 4.85 && t < 7.1) { const c = sc(.5, .5); text((det < 0 ? '-' : '') + Math.abs(det).toFixed(2), c[0], c[1], C.ink, va * st(4.9, 5.2, t), 'center', 12); }
-      const ea = va * st(5.3, 5.5, t) * (1 - st(5.9, 6.1, t));             // eigenvectors: lines the matrix only stretches
-      if (ea > 0) {
-        const tr = M[0] + M[3], disc = tr * tr - 4 * det;
-        if (disc >= 0) [1, -1].forEach(sg => {
-          const l = (tr + sg * Math.sqrt(disc)) / 2, v = unit(Math.abs(M[1]) > 1e-4 ? [M[1], l - M[0], 0] : [1, 0, 0]);
-          g.globalAlpha = ea * .7; g.strokeStyle = C.M; g.lineWidth = 1.2; g.setLineDash([6, 5]); seg(sc(-N * v[0], -N * v[1], mI), sc(N * v[0], N * v[1], mI)); g.setLineDash([]);
-          const tip = sc(v[0] * l, v[1] * l, mI); marrow(sc(0, 0, mI), tip, C.M, ea, 2); text('λ ' + l.toFixed(2), tip[0] + 10, tip[1] - 10, C.M, ea);
-        });
-      }
-      const o = sc(0, 0), X = sc(1, 0), Y = sc(0, 1);
-      marrow(o, X, C.R, va); marrow(o, Y, C.Y, va);
-      text('X', X[0] + 9, X[1] + 4, C.R, va, 'left', 12); text('Y', Y[0] + 9, Y[1] - 6, C.Y, va, 'left', 12);
-    }
-
-    /* beat 4: the skeleton, each joint carried out of its parent with its axes, landing with a ring */
-    const memo = {}, ska = A * st(7.25, 7.5, t) * (1 - st(12.8, 13.4, t));
-    if (ska > 0) {
-      const J = MJ.map(j => [j, mJoint(j, t, memo)]), js = Math.max(3, .016 * G.S);
-      g.lineWidth = 1.4; g.strokeStyle = C.ink;
-      J.forEach(([j, [p, , u]]) => { if (j !== 'hip' && u > 0) { g.globalAlpha = ska; seg(sproj(G, memo[MPAR[j]][0]), sproj(G, p)); } });
-      J.forEach(([j, [p, ax, u]]) => {
-        if (u <= 0) return;
-        const c = sproj(G, p), L = .075 * (j === 'hip' ? u : 1);
-        [[ax[0], C.R], [ax[1], C.Y], [ax[2], C.L]].forEach(([v, col]) => { g.globalAlpha = ska; g.strokeStyle = col; g.lineWidth = 1.6; seg(c, sproj(G, add(p, mul(v, L)))); });
-        g.globalAlpha = ska; g.fillStyle = C.ground; g.strokeStyle = C.ink; g.lineWidth = 1.2; g.fillRect(c[0] - js / 2, c[1] - js / 2, js, js); g.strokeRect(c[0] - js / 2, c[1] - js / 2, js, js);
-        const f = j === 'hip' ? -1 : (t - mT0(j) - .33) / .35;
-        if (f > 0 && f < 1) { g.globalAlpha = ska * (1 - f); g.strokeStyle = C.acc; g.lineWidth = 1.2; oval(c, js + f * 14, js + f * 14); g.stroke(); }
+      MCUBE_E.forEach(([a, b]) => {                                        // the plain cube, and the cube the matrix makes of it
+        const p = mp(MCUBE_V[a]), q = mp(MCUBE_V[b]); g.globalAlpha = fa * .35; g.strokeStyle = C.line; seg(p, q);
+        const p2 = mp(m3mul(M, MCUBE_V[a])), q2 = mp(m3mul(M, MCUBE_V[b])); g.globalAlpha = fa * .9 * st(2.9, 3.2, t); g.strokeStyle = det < 0 ? C.glA : C.acc; g.lineWidth = 1.4; seg(p2, q2); g.lineWidth = 1;
       });
-      if (t > 10 && t < 11) {                                               // skinning: a pulse runs down every chain
-        const u = (t - 10) / .9;
-        g.fillStyle = C.acc;
-        MJ.forEach(j => { if (j === 'hip') return; const d = MDEP[j] / 8; if (u < d - .125 || u > d) return; const k = (u - d + .125) / .125, p = sproj(G, JN[MPAR[j]].map((c, n) => mix(c, JN[j][n], k))); g.globalAlpha = ska; g.fillRect(p[0] - 3, p[1] - 3, 6, 6); });
-      }
+      MFIELD.map(v => { const w = m3mul(M, mul(v, grow)), p = mp(w); return [p, v]; }).sort((a, b) => a[0][2] - b[0][2]).forEach(([p, v]) => {
+        const hue = (Math.atan2(v[2], v[0]) * 180 / Math.PI + 360) % 360, lt = 50 + v[1] * 14, col = 'hsl(' + hue.toFixed(0) + ',62%,' + lt.toFixed(0) + '%)';
+        const ang = Math.atan2(p[1] - o[1], p[0] - o[0]), h = 6, a = fa * (p[2] < 0 ? .45 : .9);
+        g.globalAlpha = a; g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1; seg(o, p);
+        poly([p, [p[0] - Math.cos(ang - .45) * h, p[1] - Math.sin(ang - .45) * h], [p[0] - Math.cos(ang + .45) * h, p[1] - Math.sin(ang + .45) * h]]); g.fill();
+      });
+      [[1, 0, 0, C.R, 'X'], [0, 1, 0, C.Y, 'Y'], [0, 0, 1, C.L, 'Z']].forEach(([x, y, z, col, lab]) => {
+        const tip = mp(m3mul(M, [x * 1.15 * grow, y * 1.15 * grow, z * 1.15 * grow])); marrow(o, tip, col, fa, 2.6); text(lab, tip[0] + 8, tip[1] - 8, col, fa, 'left', 13);
+      });
     }
 
-    /* beat 5: the grid straightens, scales to the page's column width and settles on the page's own lines */
-    if (t >= 11) {
-      const k = eio(st(11, 11.9, t)), c = cv.getBoundingClientRect(), rr = reveal.getBoundingClientRect();
-      const colW = rules ? (rules.v[4] - rules.v[0]) / 4 : u0, top = rules ? rr.top - c.top : O[1], xc = rules ? rules.v[2] : O[0];
-      const OO = [mix(O[0], xc, k), mix(O[1], top, k)], uu = mix(u0, colW, k), NN = Math.ceil(Math.max(cw, ch) / uu) + 2;
-      const base = A * (rules ? 1 : 1 - st(11, 11.8, t)), land = st(12.25, 12.45, t), gone = 1 - st(12.45, 12.95, t);
-      const L = (a, b, al, flash) => { if (al <= .01) return; g.globalAlpha = al; g.strokeStyle = C.ink2; g.lineWidth = 1.2; seg(a, b); if (flash > 0) { g.globalAlpha = al * flash; g.strokeStyle = C.acc; g.lineWidth = 2; seg(a, b); } };
-      const flash = land * (1 - st(12.5, 12.8, t));
-      for (let n = -NN; n <= NN; n++) {                                     // columns: the five that are the page's land on them, the rest fade
-        const keep = rules && Math.abs(n) <= 2, x = OO[0] + n * uu;
-        L([x, 0], [x, ch], base * (keep ? gone : 1 - st(11.6, 12.1, t)) * .8, keep ? flash : 0);
-        const y = OO[1] - n * uu;                                           // rows: only the reveal row's top edge is a page line
-        L([0, y], [cw, y], base * (n === 0 && rules ? gone : 1 - st(11.6, 12.1, t)) * .8, n === 0 ? flash : 0);
+    /* 3-4: the multiplies */
+    const c1 = A * st(5.7, 6.0, t) * (1 - st(9.2, 9.8, t) * .65) * (1 - st(11.2, 11.7, t)), ap1 = st(5.8, 6.7, t);
+    const o1 = [-1, 1, -1], o2 = [M_X2 - 1, 1, -1];
+    if (c1 > 0) {
+      msweepFace(G, t, 6.7, 8.3, MA, MB, MAB, { o: o1 }, c1, ap1);
+      if (t > 6.2) { mlabel([-1 - MG, 0, 0], 'A', c1 * st(6.2, 6.5, t) * (1 - st(8.5, 8.8, t))); mlabel([0, -1 - MG, 0], 'B', c1 * st(6.4, 6.7, t)); }
+      if (t > 7.9 && t < 9) mlabel([0, 0, 1 + MG], 'A·B', c1 * st(7.9, 8.2, t) * (1 - st(8.55, 8.75, t)));
+    }
+    if (t > 8.5) {                                                          // A·B's cells fly from the first cube's face to the second cube's wall
+      const al = A * (1 - st(11.2, 11.7, t));
+      for (let i = 0; i < MN; i++) for (let j = 0; j < MN; j++) {
+        const u = eio(st(8.55 + j * .025 + i * .006, 9.25 + j * .025 + i * .006, t)), y = 1 - (i + .5) * MC;
+        const p1 = [-1 + (j + .5) * MC, y, 1 + MG], p2 = [M_X2 - 1 - MG, y, -1 + (j + .5) * MC];
+        const c = [mix(p1[0], p2[0], u), y + Math.sin(u * Math.PI) * .35, mix(p1[2], p2[2], u)];
+        mcell(c, mul(unit([mix(1, 0, u), 0, mix(0, 1, u)]), MC), [0, -MC, 0], MAB[i][j], al, u > 0 && u < 1 && (i + j) % 7 === 0);
       }
-      if (rules) [[1, rules.h[0]], [-1, rules.h[rules.h.length - 1]]].forEach(([n, yr]) => {   // one row up slides to the header, one down to the strip
-        if (yr == null || Math.abs(yr - top) < 4) return;
-        const y = mix(OO[1] - n * uu, yr, eio(st(11.85, 12.3, t)));
-        L([0, y], [cw, y], base * gone * .8 * st(11.6, 11.85, t), flash);
+      const ap2 = st(9.0, 9.7, t), c2 = A * (1 - st(11.95, 12.1, t));
+      msweepFace(G, t, 9.7, 11.0, null, MCm, MABC, { o: o2 }, c2, ap2);
+      if (t > 9.3 && t < 11.4) { mlabel([M_X2, -1 - MG, 0], 'C', c2 * st(9.3, 9.6, t) * (1 - st(11, 11.3, t))); mlabel([M_X2 - 1 - MG, 0, 0], 'A·B', c2 * st(9.3, 9.6, t) * (1 - st(11, 11.3, t)), 16); }
+      if (t > 10.6 && t < 11.6) mlabel([M_X2, 0, 1 + MG], 'A·B·C', c2 * st(10.6, 10.9, t) * (1 - st(11.2, 11.5, t)));
+    }
+
+    /* 5: square onto A·B·C, then its lines become the page's */
+    if (t >= 11.95 && fin) {
+      const rules = qrules(), cell = fin.s * MC, colW = cell * 4, x0 = fin.L2, y0 = fin.T2, base = A;
+      const cellA = 1 - st(12, 12.45, t), land = st(12.2, 12.4, t), flash = land * (1 - st(12.5, 12.8, t)), gone = 1 - st(12.45, 12.95, t);
+      for (let i = 0; i < MN; i++) for (let j = 0; j < MN; j++) {           // the face itself, flat now, fading to its lines
+        if (cellA <= 0) break;
+        const v = MABC[i][j]; g.globalAlpha = base * cellA * (.08 + .22 * Math.abs(v)); g.fillStyle = v >= 0 ? C.glA : C.glB;
+        g.fillRect(x0 + j * cell + cell * .07, y0 + i * cell + cell * .07, cell * .86, cell * .86);
+      }
+      const Lr = (a, b, al, f) => { if (al <= .01) return; g.globalAlpha = al; g.strokeStyle = C.ink2; g.lineWidth = 1.2; seg(a, b); if (f > 0) { g.globalAlpha = al * f; g.strokeStyle = C.acc; g.lineWidth = 2; seg(a, b); } };
+      for (let n = 0; n <= MN; n++) {
+        const major = n % 4 === 0, x = x0 + n * cell, y = y0 + n * cell;
+        Lr([x, 0], [x, ch], base * (major && rules ? gone : 1 - st(12, 12.4, t)) * .8, major ? flash : 0);
+        Lr([0, y], [cw, y], base * (n === 0 && rules ? gone : 1 - st(12, 12.4, t)) * .8, n === 0 ? flash : 0);
+      }
+      if (rules) [[-1, rules.h[0]], [1, rules.h[rules.h.length - 1]]].forEach(([n, yr]) => {   // one row up slides to the header, one down to the strip
+        if (yr == null || Math.abs(yr - y0) < 4) return;
+        const y = mix(y0 + n * colW, yr, eio(st(12.0, 12.35, t)));
+        Lr([0, y], [cw, y], base * gone * .8, flash);
       });
     }
 
     /* the read-out */
     if (G.B > 230) {
-      const ra = A * st(.5, .9, t) * (1 - st(10.6, 11, t)), sr = stage.getBoundingClientRect(), x = Math.max(24, sr.left - cv.getBoundingClientRect().left + 22), y = G.A[1] - R0 * .82;
-      const m2 = [[M[0], M[1]], [M[2], M[3]]], cc = [C.R, C.Y];
-      if (t < 2.4) mhud(x, y, m2, cc, ra, 'M = [ X  Y ]', 'COLUMNS = WHERE X, Y LAND');
-      else if (t < 4.85) mhud(x, y, m2, cc, ra, t < 3.88 ? 'S·R   ROTATE, THEN SHEAR' : 'R·S   SHEAR, THEN ROTATE', t > 4.72 ? 'S·R ≠ R·S' : '', 'ORDER MATTERS');
-      else if (t < 7.2) {
-        const eig = t > 5.3 && t < 6.05, flat = Math.abs(det) < .06;
-        mhud(x, y, m2, cc, ra, 'det M = ' + (det < -.005 ? '-' : '') + Math.abs(det).toFixed(2), flat ? 'FLAT: A DIMENSION LOST' : det < 0 ? 'FLIPPED: MIRRORED SPACE' : eig ? 'EIGENVECTORS ONLY STRETCH' : '', 'AREA OF THE UNIT SQUARE');
+      const ra = A * st(.5, .9, t) * (1 - st(11, 11.4, t)), sr = stage.getBoundingClientRect(), x = Math.max(24, sr.left - cv.getBoundingClientRect().left + 22), y = G.A[1] - R0 * .82;
+      if (t < 5.6) {
+        const flat = Math.abs(det) < .05;
+        mhud(x, y, [[M[0], M[1], M[2]], [M[3], M[4], M[5]], [M[6], M[7], M[8]]], [C.R, C.Y, C.L], ra, t < 2.8 ? 'M = [ X  Y  Z ]' : 'det M = ' + (det < -.005 ? '-' : '') + Math.abs(det).toFixed(2),
+          t < 2.8 ? 'COLUMNS = WHERE X, Y, Z LAND' : flat ? 'FLAT: A DIMENSION LOST' : det < 0 ? 'INSIDE OUT' : 'VOLUME OF THE CUBE', t < 2.8 ? '' : 'det = VOLUME SCALE');
       } else {
-        let j = 'hip'; MARM.forEach(n => { if (memo[n] && memo[n][2] > 0) j = n; });
-        const [p, ax] = memo[j] || [JN.hip, MAX.hip];
-        mhud(x, y, [[ax[0][0], ax[1][0], ax[2][0], p[0]], [ax[0][1], ax[1][1], ax[2][1], p[1]], [ax[0][2], ax[1][2], ax[2][2], p[2]], [0, 0, 0, 1]], [C.R, C.Y, C.L, C.ink],
-          ra * st(7.3, 7.6, t), 'W  ' + MNAME[j], t > 10 ? 'SKIN = W · BIND⁻¹' : 'W = W_PARENT · L', 'COLUMNS: X  Y  Z  POSITION');
+        const a = ra * st(5.8, 6.2, t), L = (i, s, c) => text(s, x, y + i * 15, c, a);
+        g.globalAlpha = a * .82; g.fillStyle = C.ground; g.fillRect(x - 10, y - 26, 200, 112);
+        const p1 = st(6.7, 8.3, t), p2 = st(9.7, 11, t), done1 = Math.min(256, Math.round(p1 * 1.08 * 256)), done2 = Math.min(256, Math.round(p2 * 1.08 * 256));
+        if (t < 8.6) { L(-1, 'A · B', C.ink); L(1, '(A·B)ij = Σk Aik · Bkj', C.ink2); L(2, '16×16 · 16×16', C.ink2); L(4, 'CELLS ' + String(done1).padStart(3, '0') + ' / 256', C.acc); }
+        else { L(-1, 'A · B · C', C.ink); L(1, 'EACH RESULT FEEDS', C.ink2); L(2, 'THE NEXT PRODUCT', C.ink2); L(3, 'W = PARENT · LOCAL', C.ink2); L(4, 'CELLS ' + String(done2).padStart(3, '0') + ' / 256', C.acc); }
       }
     }
 
@@ -2563,7 +2594,7 @@ const lore = (() => {
       const u = (t - 12.4 - n * .14) / .7; if (u < 0 || u >= 1) continue;
       brackets(G.A, R0 * (.08 + eo(u) * 1.3), n === 1 ? C.ink : C.acc, Math.pow(1 - u, 1.5), 1.6);
     }
-    tear(t - 6.55 + 10.42); tear(t - 12.65 + 10.42);
+    tear(t - 4.75 + 10.42); tear(t - 12.65 + 10.42);
     return cl((t - 12.6) / .9);
   }
   const endT = () => (mode === 'vault' ? V_END : mode === 'bloom' ? B_END : mode === 'gimbal' ? Q_END : mode === 'matrix' ? M_END : END_T);
