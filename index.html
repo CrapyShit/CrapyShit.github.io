@@ -2095,24 +2095,50 @@ const lore = (() => {
      The rings fold into the three great circles of a unit sphere: the pure quaternions, seen in stereographic projection from -1,
      with 1 at the centre and -1 at infinity. Multiplying by q = cos θ + i sin θ pushes 1 out along the i line, turns the j-k ring
      and swings the sphere slowly through infinity (a flat plane at θ = 90°) and back at θ = 180°, where q = -1: the same rotation.
+     Around it the other three great spheres of the hypersphere (1jk, 1ik, 1ij: planes through infinity at rest) are drawn as
+     translucent surfaces, so the multiply shows as spheres swelling into planes and planes closing into spheres, as on eater.net.
+     Then the sandwich f(p) = q1·p·q2 with q2 = q1⁻¹ (times -1): every surface tumbles as one rigid body, a 3D rotation.
      A second turn stops on the plane (θ = 270°) while the whole scene turns to look straight down the i line, so the plane ends flat
      on the screen: the j-k ring is a circle and the other two rings are a cross through it. The cross lines slide out onto the page's
      own rules and become them, the circle flies into the gimbal tile, and the figure scans in. */
   const Q_CAM = [2.3, .14, .55];   // where the camera ends up: 2.3 back along the i line from the plane, a little above it and to one side
-  const Q_END = 13.8, QBEAT = [0, 2.1, 3.9, 5.7, 11.9], Q_RAD = [1, .86, .72], Q_FLAT = 11.9;
+  const Q_FLAT = 14.4, Q_END = Q_FLAT + 1.9, QBEAT = [0, 2.1, 3.9, 5.7, Q_FLAT], Q_RAD = [1, .86, .72], QO = Q_FLAT - 11.9;   // QO: the end runs this much later than at first
   const rz = (v, a) => { const c = Math.cos(a), s = Math.sin(a); return [v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2]]; };
-  /* θ over time: slow through the plane at 90°, a rest at 180°, then a second turn that eases onto the plane at 270° */
-  const QK = [[5.8, 0], [7.1, Math.PI / 2 - .42], [8.7, Math.PI / 2 + .42], [9.7, Math.PI], [10, Math.PI], [10.9, Math.PI + .9], [Q_FLAT, Math.PI * 1.5]];
-  const QKM = QK.map((k, i) => (i < QK.length - 1 ? (QK[i + 1][1] - k[1]) / (QK[i + 1][0] - k[0]) : 0));
-  const QKT = QK.map((k, i) => (i === 0 || i === QK.length - 1 || QKM[i - 1] * QKM[i] <= 0 ? 0 : 2 * QKM[i - 1] * QKM[i] / (QKM[i - 1] + QKM[i])));
-  function qtheta(t) {
-    const n = QK.length - 1;
-    if (t <= QK[0][0]) return 0;
-    if (t >= QK[n][0]) return QK[n][1];
-    let i = 0; while (t > QK[i + 1][0]) i++;
-    const h = QK[i + 1][0] - QK[i][0], u = (t - QK[i][0]) / h, u2 = u * u, u3 = u2 * u;
-    return (2 * u3 - 3 * u2 + 1) * QK[i][1] + (u3 - 2 * u2 + u) * h * QKT[i] + (3 * u2 - 2 * u3) * QK[i + 1][1] + (u3 - u2) * h * QKT[i + 1];
+  /* θ over time, slow through the plane at 90°; a keyed curve with flat ends */
+  function qkey(K, t) {
+    const n = K.length - 1;
+    if (t <= K[0][0]) return K[0][1];
+    if (t >= K[n][0]) return K[n][1];
+    const M = K.map((k, i) => (i < n ? (K[i + 1][1] - k[1]) / (K[i + 1][0] - k[0]) : 0)), T = K.map((k, i) => (i === 0 || i === n || M[i - 1] * M[i] <= 0 ? 0 : 2 * M[i - 1] * M[i] / (M[i - 1] + M[i])));
+    let i = 0; while (t > K[i + 1][0]) i++;
+    const h = K[i + 1][0] - K[i][0], u = (t - K[i][0]) / h, u2 = u * u, u3 = u2 * u;
+    return (2 * u3 - 3 * u2 + 1) * K[i][1] + (u3 - 2 * u2 + u) * h * T[i] + (3 * u2 - 2 * u3) * K[i + 1][1] + (u3 - u2) * h * T[i + 1];
   }
+  const QK1 = [[6.3, 0], [7.5, Math.PI / 2 - .42], [9.0, Math.PI / 2 + .42], [9.95, Math.PI]], QK2 = [[12.5, 0], [13.4, .9], [Q_FLAT, Math.PI / 2]];
+  const QN = unit([.35, .8, .5]);
+  /* the two quaternions of f(p) = q1·p·q2 and the angle shown: left turn by i; the sandwich (a rotation, times -1); the second turn.
+     Each hand-over keeps f the same (f(p) = -p at both joins), so nothing jumps. */
+  function qq(t) {
+    if (t < 10.1) { const a = qkey(QK1, t); return [[Math.cos(a), Math.sin(a), 0, 0], [1, 0, 0, 0], a]; }
+    if (t < 12.5) { const a = Math.PI * eio(st(10.2, 12.3, t)), c = Math.cos(a), s = Math.sin(a); return [[-c, -s * QN[0], -s * QN[1], -s * QN[2]], [c, -s * QN[0], -s * QN[1], -s * QN[2]], a]; }
+    const a = qkey(QK2, t); return [[-Math.cos(a), -Math.sin(a), 0, 0], [1, 0, 0, 0], a];
+  }
+  const h4 = (a, b) => [a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3], a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
+    a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1], a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0]];
+  function proj4(p) {                                                      // stereographic projection from -1
+    const d = 1 + p[0]; if (d < .004) return null;
+    const v = [p[1] / d, p[2] / d, p[3] / d];
+    return Math.abs(v[0]) > 40 || Math.abs(v[1]) > 40 || Math.abs(v[2]) > 40 ? null : v;
+  }
+  /* the four great spheres through the axes: ijk (the pure quaternions) and the three that contain 1 (planes through infinity at rest) */
+  const QSPH = [['ijk', [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], ['1jk', [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], ['1ik', [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1]], ['1ij', [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]]
+    .map(([name, e1, e2, e3], si) => {
+      const nu = 28, nv = 14, V = [];
+      for (let a = 0; a <= nv; a++) { const ph = -Math.PI / 2 + a / nv * Math.PI, row = []; for (let b = 0; b <= nu; b++) { const th = b / nu * TAU, c = Math.cos(ph); row.push([0, 1, 2, 3].map(n => c * Math.cos(th) * e1[n] + Math.sin(ph) * e2[n] + c * Math.sin(th) * e3[n])); } V.push(row); }
+      const col = [];                                                      // colour by where each quad sits in 4D: yellow round 1, teal toward j/k, magenta toward -1
+      for (let a = 0; a < nv; a++) { col.push([]); for (let b = 0; b < nu; b++) { const p = V[a][b]; const hue = (52 + 120 * Math.max(0, p[2]) + 70 * Math.max(0, p[3]) + 250 * Math.max(0, -p[0]) * (1 - Math.max(0, p[2]))) % 360; col[a].push('hsl(' + hue.toFixed(0) + ',72%,' + (si ? 52 : 58) + '%)'); } }
+      return { name, V, nu, nv, col, top: e2 };
+    });
   const QV = { x: 0, y: 0, R: 1, ca: 1, sa: 0, cp: 1, sp: 0, per: 0 };
   const qview = (x, y, R, yaw, pit, per) => ({ x, y, R, ca: Math.cos(yaw), sa: Math.sin(yaw), cp: Math.cos(pit), sp: Math.sin(pit), per });
   const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -2152,12 +2178,6 @@ const lore = (() => {
   const QGRID = [];
   for (let k = -5; k <= 5; k++) { const la = k * Math.PI / 12, pts = []; for (let i = 0; i <= 96; i++) { const s = i / 96 * TAU; pts.push([Math.cos(la) * Math.cos(s), Math.sin(la), Math.cos(la) * Math.sin(s)]); } QGRID.push({ pts, la, lat: 1 }); }
   for (let m = 0; m < 12; m++) { const lo = m * Math.PI / 6, pts = []; for (let i = 0; i <= 96; i++) { const la = -Math.PI / 2 + i / 96 * Math.PI; pts.push([Math.cos(la) * Math.cos(lo), Math.sin(la), Math.cos(la) * Math.sin(lo)]); } QGRID.push({ pts, lat: 0 }); }
-  function qmulL(c, s, v) {                                                // (cos θ + i sin θ)·(xi + yj + zk), stereographically projected from -1
-    const w = -s * v[0], d = 1 + w;
-    if (d < .004) return null;
-    const p = [c * v[0] / d, (c * v[1] - s * v[2]) / d, (c * v[2] + s * v[1]) / d];
-    return Math.abs(p[0]) > 40 || Math.abs(p[1]) > 40 || Math.abs(p[2]) > 40 ? null : p;
-  }
   function qproj(pts) {                                                    // project a 3D polyline; break it where it jumps through infinity
     const out = []; let prev = null;
     pts.forEach(v => {
@@ -2170,7 +2190,7 @@ const lore = (() => {
   function qstroke(list, front) {                                          // [{ pts (screen, null breaks the line), col, al, w }]: one depth half
     list.forEach(L => {
       if (L.al <= .01) return;
-      g.globalAlpha = L.al * (front ? 1 : .28); g.strokeStyle = L.col; g.lineWidth = L.w; g.beginPath();
+      g.globalAlpha = L.al * (front ? 1 : .28); g.strokeStyle = L.col; g.lineWidth = L.w; g.setLineDash(L.dash ? [4, 5] : []); g.beginPath();
       for (let i = 1; i < L.pts.length; i++) {
         const a = L.pts[i - 1], b = L.pts[i];
         if (!a || !b || (a[2] + b[2] > -.004) !== front) continue;
@@ -2178,6 +2198,7 @@ const lore = (() => {
       }
       g.stroke();
     });
+    g.setLineDash([]);
   }
   function qcube(e, h, al) {                                               // the tape cube: lime face forward, two reel windows
     if (al <= 0 || h <= 0) return;
@@ -2237,14 +2258,42 @@ const lore = (() => {
       fxUsed = true;
     }
   }
+  function qsurfaces(Q1, Q2, al, list) {                                  // translucent surfaces, back to front, and their wire circles into list
+    if (al <= .01) return;
+    const quads = [];
+    QSPH.forEach((S, si) => {
+      const a0 = al * (si ? st(6.0, 6.7, QT) : st(4.6, 5.6, QT));
+      if (a0 <= .01) return;
+      const P3 = S.V.map(row => row.map(p => proj4(h4(h4(Q1, p), Q2)))), P2 = P3.map(row => row.map(v => (v ? qp(v) : null)));
+      for (let a = 0; a < S.nv; a++) for (let b = 0; b < S.nu; b++) {
+        const vs = [P3[a][b], P3[a][b + 1], P3[a + 1][b + 1], P3[a + 1][b]], ps = [P2[a][b], P2[a][b + 1], P2[a + 1][b + 1], P2[a + 1][b]];
+        if (vs.some(v => !v) || ps.some(p => !p)) continue;
+        let far = false; for (let n = 0; n < 4; n++) { const u = vs[n], w = vs[(n + 1) % 4]; if (Math.abs(u[0] - w[0]) + Math.abs(u[1] - w[1]) + Math.abs(u[2] - w[2]) > 3) far = true; }
+        if (far) continue;
+        const cx = (vs[0][0] + vs[2][0]) / 2, cy = (vs[0][1] + vs[2][1]) / 2, cz = (vs[0][2] + vs[2][2]) / 2, dd = (cx * cx + cy * cy + cz * cz) / 5;
+        quads.push([(ps[0][2] + ps[1][2] + ps[2][2] + ps[3][2]) / 4, ps, S.col[a][b], a0 / (1 + dd * dd)]);   // far pieces of a plane fade out, so it dissolves outward
+      }
+      for (let a = 1; a < S.nv; a++) list.push({ pts: qproj(S.V[a].map(p => proj4(h4(h4(Q1, p), Q2)))).map(p => (p && Math.abs(p[0] - QV.x) + Math.abs(p[1] - QV.y) < cw * .9 ? p : null)), col: S.col[a][0], al: a0 * .55, w: .8, dash: si > 0 });
+      if (si) for (let b = 0; b < S.nu; b += 2) list.push({ pts: qproj(S.V.map(row => proj4(h4(h4(Q1, row[b]), Q2)))), col: S.col[S.nv >> 1][b], al: a0 * .45, w: .8, dash: true });
+      S.lab = a0 > .3 ? proj4(h4(h4(Q1, S.top), Q2)) : null;
+    });
+    quads.sort((x, y) => x[0] - y[0]).forEach(([, ps, col, a]) => { poly(ps); g.globalAlpha = a * .11; g.fillStyle = col; g.fill(); });
+  }
+  function qtext(x, y, parts, al, size) {                                  // a line of coloured pieces
+    g.font = '500 ' + size + 'px ' + FONT; g.textBaseline = 'middle'; g.textAlign = 'left';
+    parts.forEach(([s, col]) => { g.globalAlpha = al; g.fillStyle = col; g.fillText(s, x, y); x += g.measureText(s).width; });
+  }
+  const qnum = (v, unitS, first) => (first ? (v < -.005 ? '-' : '') : v < -.005 ? ' - ' : ' + ') + Math.abs(v).toFixed(2) + unitS;
+  let QT = 0;
   function gimbalIntro(G, t) {
-    fadeWorld(G, t + 14, st(12.4, 13.6, t));
+    QT = t;
+    fadeWorld(G, t + 14, st(12.4 + QO, 13.6 + QO, t));
     if (t >= Q_END) return 1;
     const A = st(-.35, .05, t), R0 = Math.min(G.S * .46, cw * .34);
     /* The view: an orbit around the gimbal. In the second turn the camera comes down off the orbit and lines itself up with
        the i line, just beside it on the side where it runs off to the left, then looks along it at the plane. The plane is then
        square to the camera, so it lands flat on the screen, and the i line runs from beside the camera to its vanishing point. */
-    const k2 = eio(st(9.85, Q_FLAT, t)), V0 = qorbit(G.A[0], G.A[1], R0, -.55 + .1 * t, .42, .14);
+    const k2 = eio(st(12.3, Q_FLAT, t)), V0 = qorbit(G.A[0], G.A[1], R0, -.55 + .1 * t, .42, .14);
     if (k2 <= 0) Object.assign(QV, V0);
     else {
       const E1 = [-Q_CAM[0], Q_CAM[1], Q_CAM[2]], E = [mix(V0.E[0], E1[0], k2), mix(V0.E[1], E1[1], k2), mix(V0.E[2], E1[2], k2)];
@@ -2254,11 +2303,10 @@ const lore = (() => {
       cam.x = G.A[0] + R0 * dot3(E, cam.r); cam.y = G.A[1] - R0 * dot3(E, cam.u);
       Object.assign(QV, cam);
     }
-    const e = qeul(Math.min(t, 3.9)), fold = eio(st(3.9, 4.65, t)), tile = t > 11.8 ? qtile() : null;
-    const lines = [], merge = st(Q_FLAT, 12.4, t);                           // merge: the plane's grid gives way to the cross and the page
+    const e = qeul(Math.min(t, 3.9)), fold = eio(st(3.9, 4.65, t)), tile = t > Q_FLAT - .1 ? qtile() : null;
+    const lines = [], merge = st(Q_FLAT, Q_FLAT + .5, t);                           // merge: the plane's grid gives way to the cross and the page
     const lock = st(2.62, 2.75, t) * (1 - st(3.75, 3.95, t)), flick = t < 1 && (t * 20 | 0) % 3 === 0 ? .35 : 1;
-    const th = qtheta(t), qc = Math.cos(th), qs = Math.sin(th), turned = t > 5.8;
-    const Q = v => (turned ? qmulL(qc, qs, v) : v);
+    const [Q1, Q2, th] = qq(t), turned = t > 6.25, Q = v => (turned ? proj4(h4(h4(Q1, [0, v[0], v[1], v[2]]), Q2)) : v);
 
     /* beats 1-3: the three rings, Y (world axis), X (after Y), Z (after Y and X); then each folds to its axis' great circle */
     const ax = [[0, 1, 0], ry([1, 0, 0], e[0]), qrotE([e[0], e[1], 0], [0, 0, 1])], goal = [[0, 1, 0], [1, 0, 0], [0, 0, 1]], col = [C.Y, C.R, C.L];
@@ -2288,6 +2336,9 @@ const lore = (() => {
       lines.push({ pts: qproj(pts.map(Q)), col: C.ink2, al: A * .55 * (1 - merge), w: 1 });
     });
     if (build > 0 && build < 1) lines.push({ pts: qcirc([0, 1, 0], Math.cos(top), 64).map(v => qp([v[0], Math.sin(top), v[2]])), col: C.acc, al: A, w: 2 });
+    const wires = [];
+    qsurfaces(turned ? Q1 : [1, 0, 0, 0], turned ? Q2 : [1, 0, 0, 0], A * (1 - merge), wires);
+    qstroke(wires, false);
     qstroke(lines, false);
 
     /* the cube, inside: it shrinks into the point 1 as the rings fold */
@@ -2300,13 +2351,21 @@ const lore = (() => {
       g.globalAlpha = A; g.strokeStyle = C.ink; g.lineWidth = 1; seg(qp([0, 0, 0]), tr[0]); g.fillStyle = C.acc; g.fillRect(tr[0][0] - 2.5, tr[0][1] - 2.5, 5, 5);
       qcube(e, cs, A);
     }
+    qstroke(wires, true);
     qstroke(lines, true);
-    if (t > 4.7) qiline(G, t, A * st(4.7, 5.2, t) * (1 - st(12.3, 12.9, t)), k2);
+    if (t > 4.7) qiline(G, t, A * st(4.7, 5.2, t) * (1 - st(10.1, 10.4, t) * (1 - st(12.4, 12.8, t))) * (1 - st(12.3 + QO, 12.9 + QO, t)), k2);   // gone while the sandwich turns it
 
     /* the named points: 1 at the centre, i, j, k on the sphere; in beat 4 they ride along with q */
-    const ptAl = A * st(4.4, 4.9, t) * (1 - merge), q1 = qs / (1 + qc);
-    qmark(turned ? (Math.abs(q1) < 5 ? [q1, 0, 0] : null) : [0, 0, 0], C.acc, turned ? 'q' : '1', ptAl, true);   // q·1 = q, at tan(θ/2) on the i line
-    qmark(Q([1, 0, 0]), C.R, 'i', ptAl); qmark(Q([0, 1, 0]), C.Y, 'j', ptAl); qmark(Q([0, 0, 1]), C.L, 'k', ptAl);
+    const ptAl = A * st(4.4, 4.9, t) * (1 - merge), f = turned ? 'f' : '';
+    qmark(turned ? proj4(h4(Q1, Q2)) : [0, 0, 0], C.M, turned ? 'f(1)' : '1', ptAl, true);
+    qmark(Q([1, 0, 0]), C.R, f ? 'f(i)' : 'i', ptAl); qmark(Q([0, 1, 0]), C.Y, f ? 'f(j)' : 'j', ptAl); qmark(Q([0, 0, 1]), C.L, f ? 'f(k)' : 'k', ptAl);
+    QSPH.forEach((S, si) => {                                              // the spheres' names, as small tags
+      if (!S.lab || merge >= 1 || t < 5.2) return;
+      const p = qp(S.lab); if (!p || p[0] < 0 || p[0] > cw || p[1] < 0 || p[1] > ch) return;
+      const s = S.name + ' sphere', a = A * (1 - merge) * .9; g.font = '500 11px ' + FONT; const w = g.measureText(s).width + 12;
+      g.globalAlpha = a * .75; g.fillStyle = C.panel; g.fillRect(p[0] + 6, p[1] - 9 - si * 2, w, 17); g.globalAlpha = a; g.strokeStyle = S.col[S.nv >> 1][0]; g.lineWidth = 1; g.strokeRect(p[0] + 6, p[1] - 9 - si * 2, w, 17);
+      text(s, p[0] + 12, p[1] - si * 2, C.ink, a, 'left', 11);
+    });
     if (G.B > 230 && t > 4.9 && t < 5.9) {                                 // -1 is not on screen: it is the point at infinity
       const p = qp([1.05, 0, 0]);
       callout(p, 30, 26, ['-1', 'AT INFINITY'], A * st(4.9, 5.2, t) * (1 - st(5.6, 5.9, t)));
@@ -2331,23 +2390,23 @@ const lore = (() => {
     }
 
     /* flat on the screen: the cross (Y ring green, upright; Z ring blue, level) slides out and lands on the page's own rules */
-    if (t >= Q_FLAT - .3 && t < 13.2) {
+    if (t >= Q_FLAT - .3 && t < 13.2 + QO) {
       const cx = G.A[0], cy = G.A[1], rules = qrules(), lineAt = (x0, y0, x1, y1, c, a, w) => { g.globalAlpha = a; g.strokeStyle = c; g.lineWidth = w; seg([x0, y0], [x1, y1]); };
       const into = st(Q_FLAT - .3, Q_FLAT, t);                             // full length, faded in over the projected rings as they reach infinity
-      const go = (base, to, n) => { const d = Math.abs(to - base), k = eio(st(12.05 + n * .05 + d / 3000, 12.6 + n * .05 + d / 3000, t)); return [mix(base, to, k), k]; };
+      const go = (base, to, n) => { const d = Math.abs(to - base), k = eio(st(12.05 + QO + n * .05 + d / 3000, 12.6 + QO + n * .05 + d / 3000, t)); return [mix(base, to, k), k]; };
       const vt = rules ? rules.v : [cx], hz = rules ? rules.h : [cy];
       vt.forEach((xv, n) => {
-        const [x, k] = go(cx, xv, n), a = A * into * (rules ? 1 - st(.85, 1, k) * st(12.7, 13.1, t) : 1 - st(12.1, 12.6, t));
-        if (a > .01) { lineAt(x, 0, x, ch, C.Y, a * (1 - k * .6), 2); if (k > .9) lineAt(x, 0, x, ch, C.acc, a * (k - .9) * 10 * (1 - st(12.75, 13, t)), 2); }
+        const [x, k] = go(cx, xv, n), a = A * into * (rules ? 1 - st(.85, 1, k) * st(12.7 + QO, 13.1 + QO, t) : 1 - st(12.1 + QO, 12.6 + QO, t));
+        if (a > .01) { lineAt(x, 0, x, ch, C.Y, a * (1 - k * .6), 2); if (k > .9) lineAt(x, 0, x, ch, C.acc, a * (k - .9) * 10 * (1 - st(12.75 + QO, 13 + QO, t)), 2); }
       });
       hz.forEach((yh, n) => {
-        const [y, k] = go(cy, yh, n + 2), a = A * into * (rules ? 1 - st(.85, 1, k) * st(12.7, 13.1, t) : 1 - st(12.1, 12.6, t));
-        if (a > .01) { lineAt(0, y, cw, y, C.L, a * (1 - k * .6), 2); if (k > .9) lineAt(0, y, cw, y, C.acc, a * (k - .9) * 10 * (1 - st(12.75, 13, t)), 2); }
+        const [y, k] = go(cy, yh, n + 2), a = A * into * (rules ? 1 - st(.85, 1, k) * st(12.7 + QO, 13.1 + QO, t) : 1 - st(12.1 + QO, 12.6 + QO, t));
+        if (a > .01) { lineAt(0, y, cw, y, C.L, a * (1 - k * .6), 2); if (k > .9) lineAt(0, y, cw, y, C.acc, a * (k - .9) * 10 * (1 - st(12.75 + QO, 13 + QO, t)), 2); }
       });
     }
     /* ...and the j-k ring, a plain circle now, flies into the gimbal tile (or folds into the figure where there is no tile) */
     if (t >= Q_FLAT) {
-      const kt = eio(st(12.1, 12.85, t)), base = qview(G.A[0], G.A[1], R0, Math.PI / 2, 0, 0);
+      const kt = eio(st(12.1 + QO, 12.85 + QO, t)), base = qview(G.A[0], G.A[1], R0, Math.PI / 2, 0, 0);
       let V = base, nn = [1, 0, 0], r = 1, al = A;
       if (tile) {
         const tn = tile.N[1], sg = Math.sign(tn[0]) || 1;
@@ -2371,29 +2430,28 @@ const lore = (() => {
         const a = st(4.0, 4.4, t);
         L(0, 'UNIT QUATERNIONS', C.ink2, a); L(1, 'q = w+xi+yj+zk', C.ink, a); L(2, '|q| = 1', C.ink, a);
         L(4, '1  CENTRE', C.acc, st(4.5, 4.9, t)); L(5, '-1  INFINITY', C.ink2, st(4.9, 5.2, t));
-      } else {
-        L(0, 'q = cosθ + i sinθ', C.ink); L(1, 'θ ' + qdeg(th), C.acc);
-        L(2, 'w ' + (qc < 0 ? '-' : '+') + Math.abs(qc).toFixed(3) + '  x ' + (qs < 0 ? '-' : '+') + Math.abs(qs).toFixed(3), C.ink2);
-        if (t < 10) {
-          L(4, 'q·p: RING TURNS', C.ink2, st(6.2, 6.6, t)); L(5, '1 SLIDES OUT', C.ink2, st(6.4, 6.8, t));
-          L(6, 'θ 90°  SPHERE = PLANE', C.ink, st(7.4, 7.7, t) * (1 - st(8.6, 8.9, t)));
-          L(7, 'q = -1', C.acc, st(9.4, 9.6, t)); L(8, 'SAME ROTATION', C.acc, st(9.45, 9.65, t));
-        } else {
-          L(4, 'AGAIN, LOOKING', C.ink2, st(10.1, 10.4, t)); L(5, 'DOWN THE i LINE', C.ink2, st(10.2, 10.5, t));
-          L(7, 'q = -i', C.acc, st(11.4, 11.7, t)); L(8, 'PLANE = SCREEN', C.acc, st(11.5, 11.8, t));
-        }
       }
+    }
+    /* beat 4's read-out: f(p) = q1·p·q2, live, coloured by component (w yellow, i red, j green, k blue) */
+    if (turned && G.B > 230) {
+      const ra = A * st(6.0, 6.4, t) * (1 - st(Q_FLAT, Q_FLAT + .35, t)), sr = stage.getBoundingClientRect(), x = Math.max(24, sr.left - cv.getBoundingClientRect().left + 22), y = G.A[1] - R0 * 1.02;
+      const row = (yy, name, q) => qtext(x, yy, [[name + ' = ', C.ink], [qnum(q[0], '', 1), C.M], [qnum(q[1], 'i'), C.R], [qnum(q[2], 'j'), C.Y], [qnum(q[3], 'k'), C.L]], ra, 15);
+      g.globalAlpha = ra * .8; g.fillStyle = C.ground; g.fillRect(x - 10, y - 16, 330, 118);
+      row(y, 'q1', Q1); row(y + 24, 'q2', Q2); qtext(x, y + 50, [['f(p) = q1 · p · q2', C.ink]], ra, 15);
+      const note = t < 10.1 ? (t > 7.3 && t < 9.2 ? 'θ = 90°: A SPHERE IS A PLANE' : t > 9.6 ? 'q1 = -1: SAME ROTATION' : 'q2 = 1: TURN FROM THE LEFT') : t < 12.5 ? 'q2 = -q1⁻¹: ONE RIGID 3D ROTATION' : 'AGAIN, LOOKING DOWN THE i LINE';
+      text(note, x, y + 76, C.acc, ra);
+      g.globalAlpha = ra; g.fillStyle = C.ink2; text('θ ' + qdeg(th), x, y + 92, C.ink2, ra);
     }
 
     /* the circle gone: a flash of corner marks on the figure, and the scan starts */
-    if (t > 12.5) {
+    if (t > 12.5 + QO) {
       for (let n = 0; n < 3; n++) {
-        const u = (t - 12.5 - n * .14) / .7; if (u < 0 || u >= 1) continue;
+        const u = (t - 12.5 - QO - n * .14) / .7; if (u < 0 || u >= 1) continue;
         brackets(G.A, R0 * (.08 + eo(u) * 1.3), n === 1 ? C.ink : C.acc, Math.pow(1 - u, 1.5), 1.6);
       }
     }
-    tear(t - 3.72 + 10.42); tear(t - 12.75 + 10.42);
-    return cl((t - 12.75) / .9);
+    tear(t - 3.72 + 10.42); tear(t - 12.75 - QO + 10.42);
+    return cl((t - 12.75 - QO) / .9);
   }
   /* ===== intro 5: matrix =====
      After 3Blue1Brown's linear transformations and the "mm" matmul visualiser. All in 3D, through a perspective camera.
@@ -2723,10 +2781,10 @@ const grav = (() => {
   if (still.matches) return null;
   const cb = mk('canvas', 'grav'), cf = mk('canvas', 'grav grav--ui'), b = cb.getContext('2d'), f = cf.getContext('2d');
   [cb, cf].forEach(c => { c.setAttribute('aria-hidden', 'true'); document.body.append(c); });
-  const RP = 250, GAP = 26, TILT = .95, SIG = 70, NOPE = 'a,button,input,textarea,select,label,summary,video,iframe,[role="button"],[contenteditable],[tabindex]';
+  const RP = 125, GAP = 16, TILT = .95, SIG = 38, NOPE = 'a,button,input,textarea,select,label,summary,video,iframe,[role="button"],[contenteditable],[tabindex]';
   const ss = (a, c, v) => { const x = Math.min(1, Math.max(0, (v - a) / (c - a))); return x * x * (3 - 2 * x); };
   const S = { x: -1e4, y: -1e4, vis: 0, visT: 0, m: .3, mv: 0, tl: 0, tv: 0, hold: -1, rip: [], off: 0, touch: false,
-    orb: [[44, 0, 1], [68, 2.1, .7], [96, 4.2, .5]].map(([r, a, s]) => ({ r, a, rr: r, s })) };
+    orb: [[22, 0, 1], [34, 2.1, .7], [48, 4.2, .5]].map(([r, a, s]) => ({ r, a, rr: r, s })) };
   let W = 0, H = 0, dpr = 1, raf = 0, last = 0, segs = [], scanY = 0, scanX = 0, scanDue = true, scanTimer = 0;
 
   function size() {
@@ -2755,13 +2813,13 @@ const grav = (() => {
   /* the sheet: pinch toward the pointer, depth of the well, ripples; then the tilt into 3D */
   function ripple(r, now) {
     let z = 0, glow = 0;
-    S.rip.forEach(R => { const a = (now - R.t) / 1000, u = r - a * 340, env = Math.exp(-a * 1.5) * Math.exp(-(u / 70) * (u / 70)); z += R.amp * env * Math.sin(u / 20); glow += env * Math.exp(-a); });
+    S.rip.forEach(R => { const a = (now - R.t) / 1000, u = r - a * 190, env = Math.exp(-a * 1.5) * Math.exp(-(u / 38) * (u / 38)); z += R.amp * env * Math.sin(u / 11); glow += env * Math.exp(-a); });
     return [z, glow];
   }
   function P(dx, dy, now, out) {
-    const r = Math.hypot(dx, dy), q = r / SIG, pull = 24 * S.m * q * Math.exp(-q * q), [rz, glow] = ripple(r, now);
+    const r = Math.hypot(dx, dy), q = r / SIG, pull = 14 * S.m * q * Math.exp(-q * q), [rz, glow] = ripple(r, now);
     const k = r > .5 ? (r - pull + rz * .35 * (1 - S.tl)) / r : 1, x = dx * k, y = dy * k;
-    const z = 82 * S.m / (1 + (r / 55) * (r / 55)) + rz, a = TILT * Math.max(0, S.tl), sa = Math.sin(a), ca = Math.cos(a), fp = 1 / (1 - y * sa / 1200);
+    const z = 46 * S.m / (1 + (r / 30) * (r / 30)) + rz, a = TILT * Math.max(0, S.tl), sa = Math.sin(a), ca = Math.cos(a), fp = 1 / (1 - y * sa / 700);
     out[0] = S.x + x * fp; out[1] = S.y + (y * ca + z * sa) * fp; out[2] = r; out[3] = glow;
     return out;
   }
@@ -2773,7 +2831,7 @@ const grav = (() => {
         P(L[i - 1][0], L[i - 1][1], now, p); P(L[i][0], L[i][1], now, q);
         const r = (p[2] + q[2]) / 2, edge = 1 - ss(RP * .5, RP, r);
         if (edge <= 0) continue;
-        const well = Math.exp(-(r / 85) * (r / 85)) * Math.min(1, (S.m - .2) / 1.2);
+        const well = Math.exp(-(r / 45) * (r / 45)) * Math.min(1, (S.m - .2) / 1.2);
         const al = Math.min(1, base * edge * (.4 + .6 * well + .9 * (p[3] + q[3]) / 2));
         const bi = Math.min(BUCK - 1, al * BUCK | 0);
         if (bi > 0 || al > .02) paths[bi].push(p[0], p[1], q[0], q[1]);
@@ -2791,7 +2849,7 @@ const grav = (() => {
     b.setTransform(dpr, 0, 0, dpr, 0, 0); b.clearRect(0, 0, W, H);
     f.setTransform(dpr, 0, 0, dpr, 0, 0); f.clearRect(0, 0, W, H);
     if (S.vis < .005) return;
-    const lines = [], st = 8, x0 = S.x - RP, x1 = S.x + RP, y0 = S.y - RP, y1 = S.y + RP;
+    const lines = [], st = 5, x0 = S.x - RP, x1 = S.x + RP, y0 = S.y - RP, y1 = S.y + RP;
     const ox = (-scrollX % GAP + GAP) % GAP, oy = (-scrollY % GAP + GAP) % GAP;   // the grid sits on the page, not on the pointer
     for (let x = Math.floor((x0 - ox) / GAP) * GAP + ox; x <= x1; x += GAP) { const L = []; for (let y = y0; y <= y1; y += st) L.push([x - S.x, y - S.y]); lines.push(L); }
     for (let y = Math.floor((y0 - oy) / GAP) * GAP + oy; y <= y1; y += GAP) { const L = []; for (let x = x0; x <= x1; x += st) L.push([x - S.x, y - S.y]); lines.push(L); }
@@ -2838,7 +2896,7 @@ const grav = (() => {
   function release(ripple) {
     if (S.hold < 0) return;
     const ch = Math.min(1, (performance.now() - S.hold) / 1200);
-    if (ripple) S.rip.push({ t: performance.now(), amp: 10 + 26 * ch });
+    if (ripple) S.rip.push({ t: performance.now(), amp: 6 + 14 * ch });
     S.hold = -1; S.off = performance.now() + 1300; kick();
   }
 
