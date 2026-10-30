@@ -399,6 +399,8 @@ li.soft{justify-content:center}
 .lore--bg{position:fixed;z-index:-1}
 .lore-fx{position:fixed;inset:0;width:100%;height:100%;z-index:30;pointer-events:none}   /* intro layer above the page, under the header */
 body[data-view="page"] .lore-fx{display:none}
+.grav{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1}   /* the gravity grid, behind the content */
+.grav--ui{z-index:45}                                                                  /* the bent copies of the page's lines, above it */
 body[data-view="page"] .lore--bg{display:none}
 .fig{position:absolute;inset:0}
 .stage[data-lore] > .hud:not(.lore-cap),.stage[data-lore] > .ph{visibility:hidden}
@@ -2708,7 +2710,155 @@ const lore = (() => {
   document.addEventListener('visibilitychange', wake); document.addEventListener('viewchange', refit);
   new MutationObserver(wake).observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-accent'] });
   darkMq.addEventListener('change', wake);
-  return { wake };
+  return { wake, busy: () => !done && current === 'home' && !still.matches };
+})();
+
+/* ---------- gravity grid: the page's grid, sagging under the pointer like a sheet under a mass ----------
+   A patch of grid (anchored to the page, so it does not slide with the mouse) shows around the pointer and pinches in toward it.
+   Holding the button down on empty space adds mass: the patch tilts into a 3D well that deepens for about a second and the orbiters
+   are drawn in; letting go springs it back with a wobble and sends a ripple out. The page's own border lines near the pointer bend
+   with it (drawn as accent copies on a layer above the page). Behind the content, so panels and text cover the grid.
+   Off while a home intro plays, and off for reduced motion. On touch it shows where you touch and fades after you let go. */
+const grav = (() => {
+  if (still.matches) return null;
+  const cb = mk('canvas', 'grav'), cf = mk('canvas', 'grav grav--ui'), b = cb.getContext('2d'), f = cf.getContext('2d');
+  [cb, cf].forEach(c => { c.setAttribute('aria-hidden', 'true'); document.body.append(c); });
+  const RP = 250, GAP = 26, TILT = .95, SIG = 70, NOPE = 'a,button,input,textarea,select,label,summary,video,iframe,[role="button"],[contenteditable],[tabindex]';
+  const ss = (a, c, v) => { const x = Math.min(1, Math.max(0, (v - a) / (c - a))); return x * x * (3 - 2 * x); };
+  const S = { x: -1e4, y: -1e4, vis: 0, visT: 0, m: .3, mv: 0, tl: 0, tv: 0, hold: -1, rip: [], off: 0, touch: false,
+    orb: [[44, 0, 1], [68, 2.1, .7], [96, 4.2, .5]].map(([r, a, s]) => ({ r, a, rr: r, s })) };
+  let W = 0, H = 0, dpr = 1, raf = 0, last = 0, segs = [], scanY = 0, scanX = 0, scanDue = true, scanTimer = 0;
+
+  function size() {
+    dpr = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight;
+    [cb, cf].forEach(c => { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); });
+    scanDue = true; kick();
+  }
+  /* the page's visible border lines, in viewport coordinates at scan time (non-fixed ones are moved by the scroll since) */
+  function scan() {
+    scanDue = false; segs = []; scanX = scrollX; scanY = scrollY;
+    document.querySelectorAll('body *').forEach(e => {
+      if (e === cb || e === cf || e.tagName === 'CANVAS' || e.tagName === 'SCRIPT') return;
+      const r = e.getBoundingClientRect();
+      if (!r.width || !r.height || (r.width < 60 && r.height < 60) || r.bottom < -400 || r.top > H + 400) return;
+      const cs = getComputedStyle(e);
+      if (cs.visibility === 'hidden' || +cs.opacity === 0) return;
+      const fixed = cs.position === 'fixed' || cs.position === 'sticky';
+      const side = (w, st, x1, y1, x2, y2) => { if (parseFloat(w) > 0 && st !== 'none' && st !== 'hidden') segs.push([x1, y1, x2, y2, fixed]); };
+      side(cs.borderTopWidth, cs.borderTopStyle, r.left, r.top, r.right, r.top);
+      side(cs.borderBottomWidth, cs.borderBottomStyle, r.left, r.bottom, r.right, r.bottom);
+      side(cs.borderLeftWidth, cs.borderLeftStyle, r.left, r.top, r.left, r.bottom);
+      side(cs.borderRightWidth, cs.borderRightStyle, r.right, r.top, r.right, r.bottom);
+    });
+  }
+
+  /* the sheet: pinch toward the pointer, depth of the well, ripples; then the tilt into 3D */
+  function ripple(r, now) {
+    let z = 0, glow = 0;
+    S.rip.forEach(R => { const a = (now - R.t) / 1000, u = r - a * 340, env = Math.exp(-a * 1.5) * Math.exp(-(u / 70) * (u / 70)); z += R.amp * env * Math.sin(u / 20); glow += env * Math.exp(-a); });
+    return [z, glow];
+  }
+  function P(dx, dy, now, out) {
+    const r = Math.hypot(dx, dy), q = r / SIG, pull = 24 * S.m * q * Math.exp(-q * q), [rz, glow] = ripple(r, now);
+    const k = r > .5 ? (r - pull + rz * .35 * (1 - S.tl)) / r : 1, x = dx * k, y = dy * k;
+    const z = 82 * S.m / (1 + (r / 55) * (r / 55)) + rz, a = TILT * Math.max(0, S.tl), sa = Math.sin(a), ca = Math.cos(a), fp = 1 / (1 - y * sa / 1200);
+    out[0] = S.x + x * fp; out[1] = S.y + (y * ca + z * sa) * fp; out[2] = r; out[3] = glow;
+    return out;
+  }
+  const BUCK = 7;
+  function drawLines(ctx, lines, col, base, now, w) {             // lines: arrays of [dx, dy] samples; batched by alpha bucket
+    const paths = Array.from({ length: BUCK }, () => []), p = [0, 0, 0, 0], q = [0, 0, 0, 0];
+    lines.forEach(L => {
+      for (let i = 1; i < L.length; i++) {
+        P(L[i - 1][0], L[i - 1][1], now, p); P(L[i][0], L[i][1], now, q);
+        const r = (p[2] + q[2]) / 2, edge = 1 - ss(RP * .5, RP, r);
+        if (edge <= 0) continue;
+        const well = Math.exp(-(r / 85) * (r / 85)) * Math.min(1, (S.m - .2) / 1.2);
+        const al = Math.min(1, base * edge * (.4 + .6 * well + .9 * (p[3] + q[3]) / 2));
+        const bi = Math.min(BUCK - 1, al * BUCK | 0);
+        if (bi > 0 || al > .02) paths[bi].push(p[0], p[1], q[0], q[1]);
+      }
+    });
+    ctx.strokeStyle = col; ctx.lineWidth = w;
+    paths.forEach((pts, bi) => {
+      if (!pts.length) return;
+      ctx.globalAlpha = S.vis * (bi + .6) / BUCK; ctx.beginPath();
+      for (let i = 0; i < pts.length; i += 4) { ctx.moveTo(pts[i], pts[i + 1]); ctx.lineTo(pts[i + 2], pts[i + 3]); }
+      ctx.stroke();
+    });
+  }
+  function draw(now) {
+    b.setTransform(dpr, 0, 0, dpr, 0, 0); b.clearRect(0, 0, W, H);
+    f.setTransform(dpr, 0, 0, dpr, 0, 0); f.clearRect(0, 0, W, H);
+    if (S.vis < .005) return;
+    const lines = [], st = 8, x0 = S.x - RP, x1 = S.x + RP, y0 = S.y - RP, y1 = S.y + RP;
+    const ox = (-scrollX % GAP + GAP) % GAP, oy = (-scrollY % GAP + GAP) % GAP;   // the grid sits on the page, not on the pointer
+    for (let x = Math.floor((x0 - ox) / GAP) * GAP + ox; x <= x1; x += GAP) { const L = []; for (let y = y0; y <= y1; y += st) L.push([x - S.x, y - S.y]); lines.push(L); }
+    for (let y = Math.floor((y0 - oy) / GAP) * GAP + oy; y <= y1; y += GAP) { const L = []; for (let x = x0; x <= x1; x += st) L.push([x - S.x, y - S.y]); lines.push(L); }
+    drawLines(b, lines, C.acc, .85, now, 1);
+
+    /* the page's border lines near the pointer, bent the same way, on the layer above the page */
+    if (scanDue) scan();
+    const dX = scanX - scrollX, dY = scanY - scrollY, ui = [];
+    segs.forEach(([ax, ay, bx, by, fixed]) => {
+      const sx = fixed ? 0 : dX, sy = fixed ? 0 : dY, X1 = ax + sx, Y1 = ay + sy, X2 = bx + sx, Y2 = by + sy;
+      if (Math.max(X1, X2) < x0 || Math.min(X1, X2) > x1 || Math.max(Y1, Y2) < y0 || Math.min(Y1, Y2) > y1) return;
+      const L = [];
+      if (Y1 === Y2) for (let x = Math.max(x0, Math.min(X1, X2)); x <= Math.min(x1, Math.max(X1, X2)); x += 6) L.push([x - S.x, Y1 - S.y]);
+      else for (let y = Math.max(y0, Math.min(Y1, Y2)); y <= Math.min(y1, Math.max(Y1, Y2)); y += 6) L.push([X1 - S.x, y - S.y]);
+      if (L.length > 1) ui.push(L);
+    });
+    if (ui.length) drawLines(f, ui, C.acc, .8, now, 1.4);
+
+    /* orbiters, drawn in while the mass grows */
+    const p = [0, 0, 0, 0], pull = Math.min(1, Math.max(0, (S.m - .3) / 1.5));
+    S.orb.forEach((o, i) => {
+      const P0 = P(Math.cos(o.a) * o.rr, Math.sin(o.a) * o.rr, now, p), d = Math.max(2, 3.2 - i * .4);
+      b.globalAlpha = S.vis * (.75 + .25 * pull); b.fillStyle = i ? C.ink2 : C.acc; b.fillRect(P0[0] - d / 2, P0[1] - d / 2, d, d);
+    });
+  }
+
+  function tick(now) {
+    raf = 0;
+    const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now;
+    const intro = typeof lore !== 'undefined' && lore && lore.busy && lore.busy();
+    if (S.touch && S.hold < 0 && now > S.off) S.visT = 0;
+    S.vis += ((intro ? 0 : S.visT) - S.vis) * Math.min(1, dt * 6);
+    const holding = S.hold >= 0, ht = holding ? (now - S.hold) / 1000 : 0, ch = Math.min(1, ht / 1.2), e = ch * ch * (3 - 2 * ch);
+    S.mv += (((.3 + 1.5 * e) - S.m) * 90 - S.mv * 7) * dt; S.m += S.mv * dt;                 // springy mass: wobbles when let go
+    S.tv += (((holding ? 1 : 0) - S.tl) * 70 - S.tv * 7.5) * dt; S.tl = Math.min(1.12, Math.max(-.12, S.tl + S.tv * dt));
+    const pull = Math.min(1, Math.max(0, (S.m - .3) / 1.5));
+    S.orb.forEach(o => { const tr = o.r * (1 - .55 * pull); o.rr += (tr - o.rr) * Math.min(1, dt * 5); o.a += dt * o.s * 1.4 * Math.pow(o.r / Math.max(12, o.rr), 1.5); });
+    S.rip = S.rip.filter(R => now - R.t < 2400);
+    draw(now);
+    const busy = S.vis > .005 || Math.abs((intro ? 0 : S.visT) - S.vis) > .005 || holding || Math.abs(S.mv) > .01 || Math.abs(S.tv) > .01 || S.rip.length;
+    if (busy) raf = requestAnimationFrame(tick);
+  }
+  function kick() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); } }
+  function release(ripple) {
+    if (S.hold < 0) return;
+    const ch = Math.min(1, (performance.now() - S.hold) / 1200);
+    if (ripple) S.rip.push({ t: performance.now(), amp: 10 + 26 * ch });
+    S.hold = -1; S.off = performance.now() + 1300; kick();
+  }
+
+  addEventListener('pointermove', e => {
+    S.x = e.clientX; S.y = e.clientY;
+    if (e.pointerType !== 'touch') { S.touch = false; S.visT = 1; }
+    kick();
+  }, { passive: true });
+  addEventListener('pointerdown', e => {
+    if (e.button !== 0 || (e.target.closest && e.target.closest(NOPE))) return;
+    S.x = e.clientX; S.y = e.clientY; S.touch = e.pointerType === 'touch'; S.visT = 1; S.hold = performance.now(); kick();
+  }, { passive: true });
+  addEventListener('pointerup', () => release(true), { passive: true });
+  addEventListener('pointercancel', () => release(false), { passive: true });
+  document.addEventListener('pointerout', e => { if (!e.relatedTarget && e.pointerType !== 'touch') { S.visT = 0; release(false); kick(); } });
+  addEventListener('blur', () => { S.visT = 0; release(false); kick(); });
+  addEventListener('scroll', () => { clearTimeout(scanTimer); scanTimer = setTimeout(() => { scanDue = true; kick(); }, 120); kick(); }, { passive: true });
+  addEventListener('resize', size); document.addEventListener('viewchange', () => { scanDue = true; kick(); });
+  size();
+  return { kick };
 })();
 
 /* ---------- start ---------- */
