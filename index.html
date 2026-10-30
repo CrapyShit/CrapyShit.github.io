@@ -378,7 +378,7 @@ a.gtile:hover b{text-decoration:underline;text-decoration-color:var(--accent);te
 .run-tl button[aria-current]{color:var(--ink);border-color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
 .tl li[data-run]{cursor:pointer}
 .tl li[data-run]:hover b,.tl li[data-run]:focus-visible b{color:var(--accent)}
-.tl li[data-run] b::after{content:" 98";color:var(--accent);opacity:0;transition:opacity .15s}
+.tl li[data-run] b::after{content:"";display:inline-block;width:.42em;height:.42em;margin-left:.55em;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:translateY(-.12em) rotate(-45deg);opacity:0;transition:opacity .15s}
 .tl li[data-run]:hover b::after,.tl li[data-run]:focus-visible b::after{opacity:1}
 @media (max-width:40rem){.run-tl{right:var(--pad)}}
 
@@ -3416,15 +3416,6 @@ const run = (() => {
         x.globalAlpha = a; x.fillRect(p[0] - sz / 2, p[1] - sz / 2, sz, sz);
       }
     }
-    /* gates over the road at each stop, with its number */
-    STOP.forEach((S, k) => {
-      const z = S.z - 6, cx = xs(z), w = ROAD + .9, h = 4.2, P = [[cx - w, 0, z], [cx - w, h, z], [cx + w, h, z], [cx + w, 0, z]].map(pj);
-      if (P.some(p => !p) || P[0][2] > 160) return;
-      const a = 1 - sm(70, 160, P[0][2]);
-      x.globalAlpha = a; x.strokeStyle = C.acc; x.lineWidth = Math.max(1, Math.min(4, 40 / P[0][2]));
-      x.beginPath(); x.moveTo(P[0][0], P[0][1]); x.lineTo(P[1][0], P[1][1]); x.lineTo(P[2][0], P[2][1]); x.lineTo(P[3][0], P[3][1]); x.stroke();
-      const m = pj([cx, h + .6, z]); if (m) { x.globalAlpha = a * (1 - pull(k, t)); x.fillStyle = C.ink; x.font = '600 ' + Math.max(9, Math.min(28, 260 / m[2])) + 'px ' + MONO; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('0' + (k + 1) + ' / ' + STOP[k].code, m[0], m[1]); }
-    });
   }
   function sky(dist) {
     x.lineWidth = 1; x.strokeStyle = C.glB;
