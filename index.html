@@ -353,10 +353,32 @@ a.gtile:hover b{text-decoration:underline;text-decoration-color:var(--accent);te
 .plain{display:grid;gap:.3rem}
 @media (min-width:64rem){
   .about{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .about > *{padding-top:clamp(2rem,5vw,4.5rem);border-bottom:0}
+  .about > *{padding-top:clamp(.75rem,1.4vw,1.5rem);border-bottom:0}
   .ab-bio{grid-column:1/3}
   .about > .ab-col{background:none}
 }
+
+/* ---------- about: the path (a scroll-driven ride past one building per CV entry) ---------- */
+.run{position:relative;height:calc((100vh - var(--hdr)) * 8);height:calc((100svh - var(--hdr)) * 8);border-top:1px solid var(--line)}
+.run-st{position:sticky;top:var(--hdr);height:calc(100vh - var(--hdr));height:calc(100svh - var(--hdr));overflow:hidden;background:var(--ground)}
+#run-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.run-p{position:absolute;left:0;top:0;width:26rem;display:grid;gap:.65rem;padding:1.5rem 1.6rem;transform-origin:0 0;will-change:transform,opacity;
+  visibility:hidden;opacity:0;background:color-mix(in srgb,var(--ground) 40%,transparent);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);outline:0}
+.run-p h3{font-size:2.1rem;line-height:.95}
+.run-p .run-r{color:var(--accent)}
+.run-p .run-g{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.run-hud{position:absolute;left:var(--pad);top:1rem;display:grid;gap:.15rem;pointer-events:none}
+.run-hud b{font-weight:500}
+.run-tl{position:absolute;left:var(--pad);right:calc(var(--pad) + 9.5rem);bottom:1rem;display:flex;flex-wrap:wrap;gap:.4rem}
+.run-tl button{padding:.35rem .6rem;font-size:.6875rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);border:1px solid var(--line);
+  background:color-mix(in srgb,var(--ground) 70%,transparent)}
+.run-tl button:hover{color:var(--ink)}
+.run-tl button[aria-current]{color:var(--ink);border-color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
+.tl li[data-run]{cursor:pointer}
+.tl li[data-run]:hover b,.tl li[data-run]:focus-visible b{color:var(--accent)}
+.tl li[data-run] b::after{content:" 98";color:var(--accent);opacity:0;transition:opacity .15s}
+.tl li[data-run]:hover b::after,.tl li[data-run]:focus-visible b::after{opacity:1}
+@media (max-width:40rem){.run-tl{right:var(--pad)}}
 
 /* Japanese headings fall back to the mono face, which sits taller: give them more line height. */
 html:lang(ja) h1.disp{line-height:1.2}
@@ -592,16 +614,16 @@ body[data-view="page"] .lore--bg{display:none}
           <div class="grp">
             <h2 class="label" data-i18n="ab.exp">Experience</h2>
             <ul class="tl">
-              <li><span class="label">2023.09 – 2025.07</span><b>Miraculous Corp</b><span data-i18n="ab.gen">3D generalist</span></li>
-              <li><span class="label">2023.01 – 2023.06</span><b>Zag Studios</b><span data-i18n="ab.gen">3D generalist</span></li>
-              <li><span class="label">2022.01 – 2022.06</span><b>Mathematic Studio</b><span data-i18n="ab.gen">3D generalist</span></li>
+              <li data-run="3" tabindex="0" role="button"><span class="label">2023.09 – 2025.07</span><b>Miraculous Corp</b><span data-i18n="ab.gen">3D generalist</span></li>
+              <li data-run="2" tabindex="0" role="button"><span class="label">2023.01 – 2023.06</span><b>Zag Studios</b><span data-i18n="ab.gen">3D generalist</span></li>
+              <li data-run="1" tabindex="0" role="button"><span class="label">2022.01 – 2022.06</span><b>Mathematic Studio</b><span data-i18n="ab.gen">3D generalist</span></li>
             </ul>
           </div>
           <div class="grp">
             <h2 class="label" data-i18n="ab.edu">Education</h2>
             <ul class="tl">
-              <li><span class="label">2025.10 –</span><b data-i18n="ab.tut">Tokyo University of Technology, School of Media Science</b><span data-i18n="ab.rs">Research student</span></li>
-              <li><span class="label">2020.09 – 2025.06</span><b data-i18n="ab.isart">Isart Digital, Paris</b><span data-i18n="ab.ms">Master's, 3D cinema</span></li>
+              <li data-run="4" tabindex="0" role="button"><span class="label">2025.10 –</span><b data-i18n="ab.tut">Tokyo University of Technology, School of Media Science</b><span data-i18n="ab.rs">Research student</span></li>
+              <li data-run="0" tabindex="0" role="button"><span class="label">2020.09 – 2025.06</span><b data-i18n="ab.isart">Isart Digital, Paris</b><span data-i18n="ab.ms">Master's, 3D cinema</span></li>
             </ul>
           </div>
         </section>
@@ -614,6 +636,18 @@ body[data-view="page"] .lore--bg{display:none}
           <div class="grp"><h2 class="label" data-i18n="ab.also">Outside work</h2><p data-i18n="ab.kendo">Kendo, bonsai, nature walks, Japanese history</p></div>
         </section>
       </div>
+      <section class="run" id="run" aria-labelledby="run-t">
+        <div class="run-st" id="run-st">
+          <canvas id="run-cv" aria-hidden="true"></canvas>
+        <article class="run-p" tabindex="-1"><p class="label">2020.09 – 2025.06 · 01</p><h3 class="disp" data-i18n="ab.isart">Isart Digital, Paris</h3><p class="run-r label" data-i18n="ab.ms2">Master's, 3D cinema</p><p data-i18n="run.b0"></p><p class="run-g">Maya · Creature rig</p></article>
+        <article class="run-p" tabindex="-1"><p class="label">2022.01 – 2022.06 · 02</p><h3 class="disp">Mathematic Studio</h3><p class="run-r label" data-i18n="ab.gen">3D generalist</p><p data-i18n="run.b1"></p></article>
+        <article class="run-p" tabindex="-1"><p class="label">2023.01 – 2023.06 · 03</p><h3 class="disp">Zag Studios</h3><p class="run-r label" data-i18n="ab.gen">3D generalist</p><p data-i18n="run.b2"></p></article>
+        <article class="run-p" tabindex="-1"><p class="label">2023.09 – 2025.07 · 04</p><h3 class="disp">Miraculous Corp</h3><p class="run-r label" data-i18n="ab.gen">3D generalist</p><p data-i18n="run.b3"></p><p class="run-g">Maya 2024 · Unreal Engine 5.4 · Rigging</p></article>
+        <article class="run-p" tabindex="-1"><p class="label">2025.10 – · 05</p><h3 class="disp" data-i18n="ab.tut2">Tokyo University of Technology</h3><p class="run-r label" data-i18n="ab.rs">Research student</p><p data-i18n="run.b4"></p><p class="run-g">Python · Unreal Engine 5.6 · Control Rig</p></article>
+          <div class="run-hud"><span class="label"><span data-i18n="run.k">The path</span> <span id="run-n">—</span></span><b id="run-t" data-i18n="run.hint">Scroll to follow the path</b></div>
+          <nav class="run-tl" id="run-tl" aria-label="Path stops"><button type="button" data-run="0">2020 Isart</button><button type="button" data-run="1">2022 Mathematic</button><button type="button" data-run="2">2023 Zag</button><button type="button" data-run="3">2023 Miraculous</button><button type="button" data-run="4">2025 TUT</button></nav>
+        </div>
+      </section>
     </main>
 
     <main id="page" class="page" hidden>
@@ -763,6 +797,12 @@ const T = {
     'ab.cv': 'CV, PDF', 'ab.exp': 'Experience', 'ab.edu': 'Education', 'ab.soft': 'Software', 'ab.lang': 'Languages', 'ab.also': 'Outside work',
     'ab.gen': '3D generalist', 'ab.tut': 'Tokyo University of Technology, School of Media Science', 'ab.rs': 'Research student',
     'ab.isart': 'Isart Digital, Paris', 'ab.ms': "Master's, 3D cinema. RNCP level 7: expert in digital design, CGI animation and VFX",
+    'run.k': 'The path', 'run.hint': 'Scroll to follow the path', 'ab.ms2': "Master's, 3D cinema", 'ab.tut2': 'Tokyo University of Technology',
+    'run.b0': "Five years of 3D cinema in Paris, ending with a master's (RNCP level 7). My master's project, a creature rig, is still the centre of my portfolio.",
+    'run.b1': 'Six months as a 3D generalist: my first studio work, during my years at Isart.',
+    'run.b2': 'Six months as a 3D generalist on production at Zag Studios.',
+    'run.b3': 'Almost two years of 3D modelling and rigging assistance in a Maya 2024 and Unreal Engine 5.4 pipeline. Moving rigs and data between the two is where my research question came from.',
+    'run.b4': 'Research on JEFF 骨道 (Kotsudō), a tool that rebuilds Maya rigs as Unreal Engine 5.6 Control Rigs from FBX metadata: FK chains, IK limbs, IK/FK switches and spline IK.',
     'ab.fr': 'French, native', 'ab.en': 'English, professional (TOEIC 885)', 'ab.ja': 'Japanese, intermediate (around JLPT N3–N2)', 'ab.kendo': 'Kendo, bonsai, nature walks, Japanese history',
     'cr.title': 'Credits', 'cr.r1': 'Rigging and tools', 'cr.r2': 'Software', 'cr.r3': 'Character',
     'ft.site': 'Site', 'ft.find': 'Find me', 'ft.theme': 'Light / dark', 'ft.top': 'Back to top',
@@ -801,6 +841,12 @@ const T = {
     'ab.cv': '履歴書（PDF）', 'ab.exp': '職歴', 'ab.edu': '学歴', 'ab.soft': '使用ソフト', 'ab.lang': '言語', 'ab.also': '趣味',
     'ab.gen': '3Dジェネラリスト', 'ab.tut': '東京工科大学 メディア学部', 'ab.rs': '研究生',
     'ab.isart': 'Isart Digital Paris', 'ab.ms': '3Dシネマ専攻 修士課程。RNCPレベル7：デジタルデザイン、CGIアニメーション、VFXのエキスパート',
+    'run.k': '軌跡', 'run.hint': 'スクロールで軌跡をたどる', 'ab.ms2': '3Dシネマ専攻 修士課程', 'ab.tut2': '東京工科大学',
+    'run.b0': 'パリで5年間3Dシネマを学び、修士号（RNCPレベル7）を取得。修士制作のクリーチャーリグは、今もポートフォリオの中心です。',
+    'run.b1': '3Dジェネラリストとして6か月間。Isart在学中に経験した、最初のスタジオでの仕事です。',
+    'run.b2': '3Dジェネラリストとして6か月間、Zag Studiosで制作に参加しました。',
+    'run.b3': '約2年間、Maya 2024とUnreal Engine 5.4のパイプラインで3Dモデリングとリギング補助を担当。ソフト間でリグやデータを受け渡す中で、現在の研究テーマが生まれました。',
+    'run.b4': 'MayaのリグをUnreal Engine 5.6のControl Rigとして再構築するツール「JEFF 骨道」を研究・開発しています。FBXのメタデータから、FKチェーン、IKリム、IK/FK切替、スプラインIKを自動で組み立てます。',
     'ab.fr': 'フランス語（ネイティブ）', 'ab.en': '英語（ビジネスレベル、TOEIC 885点）', 'ab.ja': '日本語（中級、JLPT N3〜N2程度）', 'ab.kendo': '剣道、盆栽、自然散策、日本史',
     'cr.title': 'クレジット', 'cr.r1': 'リギング・ツール', 'cr.r2': 'ソフトウェア', 'cr.r3': 'キャラクター',
     'ft.site': 'サイト', 'ft.find': 'リンク', 'ft.theme': 'ライト / ダーク', 'ft.top': 'ページ上部へ',
@@ -2915,6 +2961,366 @@ const grav = (() => {
   addEventListener('blur', () => { S.visT = 0; release(false); kick(); });
   addEventListener('scroll', () => { clearTimeout(scanTimer); scanTimer = setTimeout(() => { scanDue = true; kick(); }, 120); kick(); }, { passive: true });
   addEventListener('resize', size); document.addEventListener('viewchange', () => { scanDue = true; kick(); });
+  size();
+  return { kick };
+})();
+
+/* ---------- about: the path ----------
+   Under the About page, a scroll-driven ride down a digital road that traces the CV. The camera starts high above it like a map,
+   swoops down behind the road and follows it; at each stop it pulls off to face a building (blocky stacked modules, cantilevers,
+   pipes and serials in the manner of Marathon's architecture, digitised: translucent faces, lit edges) and the glass panel in
+   front of it, which carries the HTML text for that stop, mapped onto the panel in perspective. Clicking an entry in the
+   Experience or Education lists, or a tick on the timeline, warps you to that stop. Drawn in the theme's colours. */
+const run = (() => {
+  const sec = $('#run'), box = $('#run-st'), cvR = $('#run-cv'), x = cvR.getContext('2d'), panels = $$('.run-p'), ticks = $$('#run-tl button');
+  const hudN = $('#run-n'), hudT = $('#run-t');
+  if (!sec) return null;
+  const N = panels.length, cl = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const sm = (a, b, v) => { const t = cl((v - a) / (b - a)); return t * t * (3 - 2 * t); };
+  const eio = v => { v = cl(v); return v < .5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2; };
+  const mix = (a, b, k) => a + (b - a) * k, mixV = (a, b, k) => [mix(a[0], b[0], k), mix(a[1], b[1], k), mix(a[2], b[2], k)];
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  let seed = 7;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const PW = 5.4, MONO = '"M PLUS 1 Code",ui-monospace,Menlo,Consolas,monospace';
+  const LIME = '#C6FF1A';
+
+  /* ----- the road: x(z) wanders left and right ----- */
+  const xs = z => 7 * Math.sin(z * .045) + 3.2 * Math.sin(z * .11 + 1);
+  const ROAD = 1.9, Z0 = 34, DZ = 46, ZS = Array.from({ length: N }, (_, k) => Z0 + k * DZ), ZEND = ZS[N - 1] + 40;
+  const SIDE = ZS.map((z, k) => (k % 2 ? -1 : 1));
+  /* each stop: the panel (centre, facing the road and the camera coming in), where the camera parks to read it, and the building */
+  const STOP = ZS.map((z, k) => {
+    const s = SIDE[k], c = [xs(z) + s * 4.6, 2.7, z - 1], n = unit([-s * .62, 0, -.78]);
+    return { z, s, c, n, cam: add(c, add(mul(n, 7.2), [0, .25, 0])), b: [xs(z) + s * 13.5, 0, z + 5] };
+  });
+
+  /* ----- geometry: boxes made of faces, plus decals ----- */
+  const B = [];                                                            // { faces, c (centre), r (radius), kind }
+  function boxF(cx, y0, cz, w, h, d, st) {
+    const hw = w / 2, hd = d / 2, F = [];
+    const face = (n, c, R, hw2, hh) => {                                   // R: right as seen from outside; up is y except for top/bottom
+      const U = Math.abs(n[1]) > .5 ? [0, 0, n[1] > 0 ? -1 : 1] : [0, 1, 0];
+      F.push({ n, pts: [add(c, add(mul(R, -hw2), mul(U, -hh))), add(c, add(mul(R, hw2), mul(U, -hh))), add(c, add(mul(R, hw2), mul(U, hh))), add(c, add(mul(R, -hw2), mul(U, hh)))], st, dec: [] });
+      return F[F.length - 1];
+    };
+    const cy = y0 + h / 2, out = {
+      px: face([1, 0, 0], [cx + hw, cy, cz], [0, 0, 1], hd, h / 2), nx: face([-1, 0, 0], [cx - hw, cy, cz], [0, 0, -1], hd, h / 2),
+      pz: face([0, 0, 1], [cx, cy, cz + hd], [-1, 0, 0], hw, h / 2), nz: face([0, 0, -1], [cx, cy, cz - hd], [1, 0, 0], hw, h / 2),
+      py: face([0, 1, 0], [cx, y0 + h, cz], [1, 0, 0], hw, hd)
+    };
+    out.F = F; out.c = [cx, cy, cz]; out.r = Math.hypot(hw, h / 2, hd);
+    return out;
+  }
+  const ST = {                                                             // face styles: fill token, fill alpha, edge token, edge alpha
+    shell: ['panel', .82, 'ink2', .55], dark: ['ground', .9, 'ink2', .5], acc: ['acc', .5, 'acc', .95], cyan: ['glB', .38, 'glB', .9],
+    lime: [LIME, .7, LIME, .95], ghost: ['panel', .2, 'ink2', .35], wire: [null, 0, 'glB', .4], glass: ['ground', .18, 'acc', .9]
+  };
+  function building(k) {
+    const S = STOP[k], s = S.s, [bx, , bz] = S.b, fr = -s, parts = [];
+    const P = (cx, y0, cz, w, h, d, st) => { const b = boxF(cx, y0, cz, w, h, d, st); parts.push(b); return b; };
+    const front = b => (fr > 0 ? b.px : b.nx);                              // the face turned to the road
+    P(bx, 0, bz, 10, .9, 9, 'dark');                                        // plinth
+    const plinth = parts[0]; front(plinth).dec.push({ t: 'stripes', u0: .04, v0: .2, u1: .3, v1: .8, col: LIME });
+    const core = P(bx + s * 2.2, .9, bz + 1.5, 4.2, 9 + k * .6, 4.2, 'shell');
+    front(core).dec.push({ t: 'text', s: '0' + (k + 1), u0: .12, v0: .06, u1: .9, v1: .3, col: 'ink', font: 'display' });
+    const m1 = P(bx - s * .8, 2.6, bz - .6, 6.4, 2.6, 5.2, k % 2 ? 'cyan' : 'acc');   // cantilevered modules, pushed toward the road
+    front(m1).dec.push({ t: 'grid', u0: .06, v0: .18, u1: .62, v1: .82, col: 'ink' });
+    const m2 = P(bx - s * 1.9, 5.6 + k * .3, bz + .4, 7.6, 2.4, 4.6, 'shell');
+    front(m2).dec.push({ t: 'text', s: S.code, u0: .05, v0: .12, u1: .55, v1: .55, col: 'ink', font: 'mono' });
+    if (k % 2 === 0) front(m2).dec.push({ t: 'logo', u0: .7, v0: .14, u1: .93, v1: .86 });   // the site's mark, on every other building
+    const m3 = P(bx + s * .6, 8.4 + k * .4, bz - 1.2, 5, 1.8, 4, k % 2 ? 'acc' : 'lime');
+    front(m3).dec.push({ t: 'stripes', u0: .55, v0: .15, u1: .95, v1: .85, col: 'ink' });
+    P(bx - s * 3.6, 1.2, bz - 3.4, .35, .35, 7.5, 'lime');                  // a pipe along the front, and one riser
+    P(bx - s * 3.6, 1.2, bz - 3.4, .35, 4.6, .35, 'lime');
+    P(bx + s * 3.6, .9, bz - 3.1, 1.6, 1.4, 1.6, 'cyan'); P(bx + s * 1.4, .9, bz - 3.6, 1.2, 1, 1.2, 'shell');   // crates
+    const top = 9.9 + k * .6;
+    return { parts, mast: [bx + s * 2.2, top, bz + 1.5, 4.5], tags: [[bx - s * 4, 4.4, bz - 3], [bx + s * 3, top + 1, bz + 2]].map((p, i) => ({ p, s: ['72', '107', '42', '15pH', '82', '66-7k', '90', '23', '5', '33R'][(k * 2 + i) % 10] })) };
+  }
+  STOP.forEach((S, k) => { S.code = ['ISD-20', 'MTH-22', 'ZAG-23', 'MC-23', 'TUT-25'][k] || 'S-' + k; });
+  const BLD = STOP.map((S, k) => building(k));
+  const FILL = [];                                                          // the rest of the district: plain blocks either side
+  for (let z = -10; z < ZEND + 30; z += 7 + rnd() * 5) [-1, 1].forEach(s => {
+    if (STOP.some(S => S.s === s && Math.abs(S.z + 5 - z) < 13)) return;
+    const x0 = xs(z) + s * (9 + rnd() * 8), w = 3 + rnd() * 4, d = 3 + rnd() * 4, h = 2 + rnd() * 7, st = rnd() < .14 ? 'acc' : rnd() < .2 ? 'cyan' : rnd() < .5 ? 'shell' : 'dark';
+    const b = boxF(x0, 0, z, w, h, d, st), parts = [b];
+    if (rnd() < .5) parts.push(boxF(x0 - s * rnd() * 1.2, h, z + (rnd() - .5) * 1.5, w * (.5 + rnd() * .4), 1 + rnd() * 2.4, d * (.5 + rnd() * .5), rnd() < .3 ? 'lime' : 'shell'));
+    if (rnd() < .25) (s > 0 ? b.nx : b.px).dec.push({ t: 'stripes', u0: .1, v0: .1, u1: .4, v1: .9, col: rnd() < .5 ? LIME : 'ink' });
+    FILL.push({ parts });
+  });
+  const SKY = [];                                                           // a wire city further out
+  for (let i = 0; i < 90; i++) { const s = rnd() < .5 ? -1 : 1, z = -20 + rnd() * (ZEND + 60); SKY.push({ x: xs(z) + s * (26 + rnd() * 40), z, w: 3 + rnd() * 6, d: 3 + rnd() * 6, h: 6 + rnd() * 26 }); }
+
+  /* ----- camera ----- */
+  let W = 0, H = 0, dpr = 1, cam = null;
+  function look(E, T) {
+    const f = unit(sub(T, E)), r = unit(cross([0, 1, 0], f)), u = cross(f, r);
+    return { E, f, r, u, F: H * .95, cx: W / 2, cy: H * .52 };
+  }
+  const toC = p => { const d = sub(p, cam.E); return [dot(d, cam.r), dot(d, cam.u), dot(d, cam.f)]; };
+  const scr = c => [cam.cx + cam.F * c[0] / c[2], cam.cy - cam.F * c[1] / c[2]];
+  const pj = p => { const c = toC(p); return c[2] > .1 ? [...scr(c), c[2]] : null; };
+  function clipPoly(P) {                                                    // camera-space polygon clipped to z > near
+    const out = [], NZ = .12;
+    for (let i = 0; i < P.length; i++) {
+      const a = P[i], b = P[(i + 1) % P.length], ia = a[2] > NZ, ib = b[2] > NZ;
+      if (ia) out.push(a);
+      if (ia !== ib) { const k = (NZ - a[2]) / (b[2] - a[2]); out.push([mix(a[0], b[0], k), mix(a[1], b[1], k), NZ]); }
+    }
+    return out;
+  }
+  function seg3(a, b) {                                                     // a 3D segment, clipped, to screen
+    let A = toC(a), Bc = toC(b);
+    if (A[2] < .12 && Bc[2] < .12) return null;
+    if (A[2] < .12) { const k = (.12 - A[2]) / (Bc[2] - A[2]); A = [mix(A[0], Bc[0], k), mix(A[1], Bc[1], k), .12]; }
+    if (Bc[2] < .12) { const k = (.12 - Bc[2]) / (A[2] - Bc[2]); Bc = [mix(Bc[0], A[0], k), mix(Bc[1], A[1], k), .12]; }
+    return [scr(A), scr(Bc), (A[2] + Bc[2]) / 2];
+  }
+
+  /* ----- timeline: scroll units t (0 .. T); the camera's distance along the road and how far it has pulled off to a stop ----- */
+  const TK = STOP.map((S, k) => 1.4 + k * 2.1), T = TK[N - 1] + 1.6;
+  const UK = [[0, -6], [1, 4]];
+  STOP.forEach((S, k) => { UK.push([TK[k] - .5, S.z - 13], [TK[k] + .5, S.z - 9.5]); });
+  UK.push([T, ZEND - 10]);
+  function ukey(t) {                                                        // monotone cubic through UK
+    const K = UK, n = K.length - 1;
+    if (t <= K[0][0]) return K[0][1];
+    if (t >= K[n][0]) return K[n][1];
+    let i = 0; while (t > K[i + 1][0]) i++;
+    const M = i2 => (K[i2 + 1][1] - K[i2][1]) / (K[i2 + 1][0] - K[i2][0]), tg = i2 => (i2 <= 0 || i2 >= n ? 0 : (M(i2 - 1) * M(i2) <= 0 ? 0 : 2 * M(i2 - 1) * M(i2) / (M(i2 - 1) + M(i2))));
+    const h = K[i + 1][0] - K[i][0], u = (t - K[i][0]) / h, u2 = u * u, u3 = u2 * u;
+    return (2 * u3 - 3 * u2 + 1) * K[i][1] + (u3 - 2 * u2 + u) * h * tg(i) + (3 * u2 - 2 * u3) * K[i + 1][1] + (u3 - u2) * h * tg(i + 1);
+  }
+  const pull = (k, t) => sm(TK[k] - .8, TK[k] - .3, t) * (1 - sm(TK[k] + .3, TK[k] + .8, t));
+  function camAt(t) {
+    const u = ukey(t), E0 = [xs(u) - (xs(u + 12) - xs(u)) * .25, 2.6, u], T0 = [xs(u + 14), 1.1, u + 14];
+    let E = E0, Tg = T0;
+    const D = Math.max(7.2, .95 * H * PW / (.8 * Math.max(1, W)));        // far enough back that the pane fits the width
+    STOP.forEach((S, k) => { const w = eio(pull(k, t)); if (w > 0) { E = mixV(E, add(S.c, add(mul(S.n, D), [0, .25, 0])), w); Tg = mixV(Tg, S.c, w); } });
+    const o = 1 - eio(sm(0, 1.05, t));                                      // the start: a high, tilted map of the whole road
+    if (o > 0) { const mid = ZEND * .42; E = mixV(E, [xs(mid) + 52, 74, mid - 70], o); Tg = mixV(Tg, [xs(mid), 0, mid + 6], o); }
+    return look(E, Tg);
+  }
+
+  /* ----- drawing ----- */
+  const col = c => (c === LIME ? LIME : C[c] || c);
+  function decal(d, p3, U, V) {                                            // a flat thing on a face, drawn through an affine map of its rectangle
+    const o = [p3[0] + U[0] * d.u0 + V[0] * d.v0, p3[1] + U[1] * d.u0 + V[1] * d.v0], du = d.u1 - d.u0, dv = d.v1 - d.v0;
+    const a = U[0] * du / 100, b = U[1] * du / 100, c = V[0] * dv / 100, e = V[1] * dv / 100;
+    x.save(); x.setTransform(dpr * a, dpr * b, dpr * c, dpr * e, dpr * o[0], dpr * o[1]);
+    if (d.t === 'stripes') {
+      x.beginPath(); x.rect(0, 0, 100, 100); x.clip(); x.fillStyle = col(d.col); x.globalAlpha *= .85;
+      for (let i = -100; i < 200; i += 22) { x.beginPath(); x.moveTo(i, 100); x.lineTo(i + 11, 100); x.lineTo(i + 111, 0); x.lineTo(i + 100, 0); x.closePath(); x.fill(); }
+    } else if (d.t === 'grid') {
+      x.strokeStyle = col(d.col); x.lineWidth = 2; x.globalAlpha *= .6;
+      for (let i = 0; i <= 100; i += 12.5) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 100); x.moveTo(0, i); x.lineTo(100, i); x.stroke(); }
+    } else if (d.t === 'text') {
+      x.fillStyle = col(d.col); x.textBaseline = 'middle'; x.textAlign = 'left';
+      const fam = d.font === 'display' ? getComputedStyle(root).getPropertyValue('--display') || MONO : MONO;
+      x.font = '800 ' + (d.font === 'display' ? 92 : 46) + 'px ' + fam;
+      const w = x.measureText(d.s).width, k = Math.min(1, 100 / Math.max(1, w));
+      x.scale(k, 1); x.fillText(d.s, 0, 50);
+    } else if (d.t === 'logo') {
+      x.scale(100 / 40, 100 / 40); x.fillStyle = C.acc; x.fill(LOGO_SQ);
+      x.translate(6, 13); x.scale(1.75, 1.75); x.fillStyle = C.ground; x.fill(LOGO_EYE_T); x.fill(LOGO_EYE_B);
+    }
+    x.restore();
+  }
+  const LOGO_SQ = new Path2D('M9 1h30v30l-8 8H1V9z'), LOGO_EYE_T = new Path2D('M0 4A10 10 0 0 1 16 4V4.05H10V2H6V4.05H0z'), LOGO_EYE_B = new Path2D('M16 4A10 10 0 0 1 0 4V3.95H6V6H10V3.95H16z');
+  function drawFaces(list, dist) {                                          // painter's order, back to front
+    const Q = [];
+    list.forEach(F => {
+      if (dot(F.n, sub(cam.E, F.pts[0])) <= 0) return;                     // facing away
+      const C3 = clipPoly(F.pts.map(toC));
+      if (C3.length < 3) return;
+      const z = (toC(F.pts[0])[2] + toC(F.pts[2])[2]) / 2;
+      if (z > dist) return;
+      Q.push([z, C3, F]);
+    });
+    Q.sort((a, b) => b[0] - a[0]).forEach(([z, C3, F]) => {
+      const [fill, fa, edge, ea] = ST[F.st], fog = 1 - sm(dist * .55, dist, z), shade = F.n[1] > .5 ? 1 : Math.abs(F.n[0]) > .5 ? .86 : .72;
+      const S2 = C3.map(scr);
+      x.beginPath(); S2.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.closePath();
+      if (fill) { x.globalAlpha = fa * shade * fog; x.fillStyle = col(fill); x.fill(); }
+      x.globalAlpha = ea * fog; x.strokeStyle = col(edge); x.lineWidth = 1; x.stroke();
+      if (F.dec.length && fog > .05 && z < dist * .6) {
+        const P = F.pts.map(pj);
+        if (P.every(Boolean)) {
+          const U = [P[2][0] - P[3][0], P[2][1] - P[3][1]], V = [P[0][0] - P[3][0], P[0][1] - P[3][1]];
+          x.globalAlpha = fog; F.dec.forEach(d => decal(d, P[3], U, V));
+        }
+      }
+    });
+  }
+  function road(t, time) {
+    const u = ukey(t), z0 = Math.max(-8, cam.E[2] - 30), z1 = Math.min(ZEND + 20, cam.E[2] + 140), lanes = 9;
+    /* the floor grid, following the road */
+    x.lineWidth = 1; x.strokeStyle = C.line;
+    for (let gz = Math.ceil(z0 / 3) * 3; gz < z1; gz += 3) {
+      const r = seg3([xs(gz) - 60, 0, gz], [xs(gz) + 60, 0, gz]); if (!r) continue;
+      x.globalAlpha = .55 * (1 - sm(40, 140, r[2])); x.beginPath(); x.moveTo(r[0][0], r[0][1]); x.lineTo(r[1][0], r[1][1]); x.stroke();
+    }
+    for (let gx = -60; gx <= 60; gx += 3) {
+      x.globalAlpha = .4; x.beginPath(); let on = false;
+      for (let gz = z0; gz < z1; gz += 4) { const p = pj([xs(gz) + gx, 0, gz]); if (!p) { on = false; continue; } x.globalAlpha = .4; if (on) x.lineTo(p[0], p[1]); else x.moveTo(p[0], p[1]); on = true; }
+      x.stroke();
+    }
+    /* the road: lanes of light running forward */
+    const dz = .55, motion = still.matches ? 0 : time;
+    for (let j = 0; j < lanes; j++) {
+      const off = (j / (lanes - 1) - .5) * 2 * ROAD, edge = j === 0 || j === lanes - 1;
+      x.fillStyle = edge ? C.acc : j % 3 ? C.glB : C.acc;
+      for (let z = Math.ceil(z0 / dz) * dz; z < z1; z += dz) {
+        const tx = (xs(z + .5) - xs(z - .5)), nl = Math.hypot(tx, 1), p = pj([xs(z) + off / nl, .02, z - off * tx / nl]);
+        if (!p) continue;
+        const fl = (z * .35 - motion * 2.2 + j * .37) % 1, pulse = Math.pow((fl + 1) % 1, 6), d = p[2];
+        const a = (edge ? .9 : .32 + .6 * pulse) * (1 - sm(50, 150, d)) * (z > ZEND ? 1 - sm(ZEND, ZEND + 18, z) : 1);
+        if (a < .02) continue;
+        const sz = Math.max(1, Math.min(5, (edge ? 2.4 : 1.6) * 30 / d));
+        x.globalAlpha = a; x.fillRect(p[0] - sz / 2, p[1] - sz / 2, sz, sz);
+      }
+    }
+    /* gates over the road at each stop, with its number */
+    STOP.forEach((S, k) => {
+      const z = S.z - 6, cx = xs(z), w = ROAD + .9, h = 4.2, P = [[cx - w, 0, z], [cx - w, h, z], [cx + w, h, z], [cx + w, 0, z]].map(pj);
+      if (P.some(p => !p) || P[0][2] > 160) return;
+      const a = 1 - sm(70, 160, P[0][2]);
+      x.globalAlpha = a; x.strokeStyle = C.acc; x.lineWidth = Math.max(1, Math.min(4, 40 / P[0][2]));
+      x.beginPath(); x.moveTo(P[0][0], P[0][1]); x.lineTo(P[1][0], P[1][1]); x.lineTo(P[2][0], P[2][1]); x.lineTo(P[3][0], P[3][1]); x.stroke();
+      const m = pj([cx, h + .6, z]); if (m) { x.fillStyle = C.ink; x.font = '600 ' + Math.max(9, Math.min(28, 260 / m[2])) + 'px ' + MONO; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('0' + (k + 1) + ' / ' + STOP[k].code, m[0], m[1]); }
+    });
+  }
+  function sky(dist) {
+    x.lineWidth = 1; x.strokeStyle = C.glB;
+    SKY.forEach(b => {
+      const c = toC([b.x, b.h / 2, b.z]); if (c[2] < 5 || c[2] > dist * 1.3) return;
+      const hw = b.w / 2, hd = b.d / 2, V = [[-hw, 0, -hd], [hw, 0, -hd], [hw, 0, hd], [-hw, 0, hd]].flatMap(([a, , d]) => [[b.x + a, 0, b.z + d], [b.x + a, b.h, b.z + d]]).map(pj);
+      if (V.some(p => !p)) return;
+      x.globalAlpha = .22 * (1 - sm(dist * .7, dist * 1.3, c[2])); x.beginPath();
+      [[0, 1], [2, 3], [4, 5], [6, 7], [1, 3], [3, 5], [5, 7], [7, 1]].forEach(([i, j]) => { x.moveTo(V[i][0], V[i][1]); x.lineTo(V[j][0], V[j][1]); });
+      x.stroke();
+    });
+  }
+  function extras(time) {                                                   // masts, light beams and floating read-outs at the stops
+    BLD.forEach((b, k) => {
+      const [mx, my, mz, mh] = b.mast, base = pj([mx, my, mz]), tip = pj([mx, my + mh, mz]);
+      if (base && tip && base[2] < 150) {
+        const a = 1 - sm(80, 150, base[2]); x.globalAlpha = a * .8; x.strokeStyle = C.ink2; x.lineWidth = 1;
+        x.beginPath(); x.moveTo(base[0], base[1]); x.lineTo(tip[0], tip[1]);
+        for (let i = 1; i < 4; i++) { const l = pj([mx - .6, my + mh * i / 4, mz]), r = pj([mx + .6, my + mh * i / 4, mz]); if (l && r) { x.moveTo(l[0], l[1]); x.lineTo(r[0], r[1]); } }
+        x.stroke();
+        if (!still.matches && (time * 1.5 + k) % 1 < .5) { x.globalAlpha = a; x.fillStyle = C.acc; x.fillRect(tip[0] - 2, tip[1] - 2, 4, 4); }
+      }
+      const S = STOP[k], g = pj([S.b[0], 0, S.b[2] - 6]), apex = pj([S.b[0], 22, S.b[2] - 6]);   // a wire beam over the stop
+      if (g && apex && g[2] < 160) {
+        const a = .35 * (1 - sm(80, 160, g[2])), cs = [[-2, -2], [2, -2], [2, 2], [-2, 2]].map(([dx, dz]) => pj([S.b[0] + dx, 0, S.b[2] - 6 + dz]));
+        if (cs.every(Boolean)) { x.globalAlpha = a; x.strokeStyle = C.glB; x.beginPath(); cs.forEach(c => { x.moveTo(c[0], c[1]); x.lineTo(apex[0], apex[1]); }); x.stroke(); }
+      }
+      b.tags.forEach(({ p, s }, i) => {
+        const q = pj(p); if (!q || q[2] > 90) return;
+        const a = 1 - sm(45, 90, q[2]), fs = Math.max(10, Math.min(24, 300 / q[2]));
+        x.globalAlpha = a * .7; x.strokeStyle = i ? C.acc : C.glA; x.lineWidth = 1; x.beginPath();
+        for (let r = 0; r < 4; r++) { const an = r * Math.PI / 4 + time * .4; x.moveTo(q[0] - Math.cos(an) * fs * .7, q[1] - Math.sin(an) * fs * .7); x.lineTo(q[0] + Math.cos(an) * fs * .7, q[1] + Math.sin(an) * fs * .7); }
+        x.stroke(); x.globalAlpha = a; x.fillStyle = C.ink; x.font = '600 ' + fs + 'px ' + MONO; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText(s, q[0] + fs * .5, q[1] - fs * .5);
+      });
+    });
+  }
+  /* the glass panels: a pane in the scene, and its HTML text laid onto it with a perspective transform */
+  function glass(k, a) {
+    const S = STOP[k], el = panels[k], ew = el.offsetWidth, eh = el.offsetHeight, ph = PW * eh / Math.max(1, ew);
+    const r = unit(cross([0, 1, 0], mul(S.n, -1))), hw = mul(r, PW / 2), hh = [0, ph / 2, 0];
+    const Wc = [add(sub(S.c, hw), hh), add(add(S.c, hw), hh), sub(add(S.c, hw), hh), sub(sub(S.c, hw), hh)], P = Wc.map(pj);
+    const vis = a > .01 && P.every(p => p && p[2] < 70) && dot(S.n, sub(cam.E, S.c)) > 0;
+    if (!vis) { el.style.opacity = '0'; el.style.visibility = 'hidden'; return; }
+    /* the pane itself: a faint fill, a lit frame and corner marks */
+    x.globalAlpha = a * .5; x.fillStyle = C.ground; x.beginPath(); P.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.closePath(); x.fill();
+    x.globalAlpha = a; x.strokeStyle = C.acc; x.lineWidth = 1.2; x.stroke();
+    const stand = [pj(add(sub(S.c, mul(hw, .7)), [0, -ph / 2, 0])), pj([S.c[0] - hw[0] * .7, 0, S.c[2] - hw[2] * .7]), pj(add(add(S.c, mul(hw, .7)), [0, -ph / 2, 0])), pj([S.c[0] + hw[0] * .7, 0, S.c[2] + hw[2] * .7])];
+    if (stand.every(Boolean)) { x.globalAlpha = a * .6; x.strokeStyle = C.ink2; x.beginPath(); x.moveTo(stand[0][0], stand[0][1]); x.lineTo(stand[1][0], stand[1][1]); x.moveTo(stand[2][0], stand[2][1]); x.lineTo(stand[3][0], stand[3][1]); x.stroke(); }
+    /* homography from the element's box to the projected quad, as a CSS matrix3d */
+    const [x0, y0] = P[0], [x1, y1] = P[1], [x2, y2] = P[2], [x3, y3] = P[3];
+    const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3, den = dx1 * dy2 - dx2 * dy1;
+    const g = (dx3 * dy2 - dx2 * dy3) / den, h = (dx1 * dy3 - dx3 * dy1) / den;
+    const A = x1 - x0 + g * x1, Bq = x3 - x0 + h * x3, Cq = x0, D = y1 - y0 + g * y1, E = y3 - y0 + h * y3, Fq = y0;
+    el.style.transform = 'matrix3d(' + [A / ew, D / ew, 0, g / ew, Bq / eh, E / eh, 0, h / eh, 0, 0, 1, 0, Cq, Fq, 0, 1].map(v => +v.toFixed(6)).join(',') + ')';
+    el.style.opacity = a.toFixed(3); el.style.visibility = 'visible';
+  }
+  function minimap(t) {
+    const w = 132, h = 92, ox = W - w - 18, oy = H - h - 18, zA = -10, zB = ZEND + 4, X = z => ox + 8 + (z - zA) / (zB - zA) * (w - 16), Y = v => oy + h / 2 - v * 2.2;
+    x.globalAlpha = .7; x.fillStyle = C.ground; x.fillRect(ox, oy, w, h); x.globalAlpha = 1; x.strokeStyle = C.line; x.lineWidth = 1; x.strokeRect(ox + .5, oy + .5, w, h);
+    x.strokeStyle = C.ink2; x.beginPath(); for (let z = zA; z <= zB; z += 2) { const px = X(z), py = Y(xs(z)); if (z === zA) x.moveTo(px, py); else x.lineTo(px, py); } x.stroke();
+    STOP.forEach((S, k) => { x.fillStyle = pull(k, t) > .5 ? C.acc : C.ink; x.fillRect(X(S.b[2]) - 2.5, Y(S.b[0]) - 2.5, 5, 5); });
+    const ex = X(cam.E[2]), ey = Y(cam.E[0]); x.fillStyle = C.acc; x.fillRect(ex - 3, ey - 3, 6, 6);
+    const fx = cam.f[2] * (w - 16) / (zB - zA), fy = -cam.f[0] * 2.2, fl = Math.hypot(fx, fy) || 1;
+    x.globalAlpha = .6; x.strokeStyle = C.acc; x.beginPath(); x.moveTo(ex, ey); x.lineTo(ex + fx / fl * 16, ey + fy / fl * 16); x.stroke();
+  }
+
+  /* ----- scroll, warp, loop ----- */
+  let tNow = 0, tGoal = 0, raf = 0, last = 0, onScreen = false, warp = 0, vel = 0, active = -1;
+  const span = () => sec.offsetHeight - box.offsetHeight;
+  const tOf = () => { const r = sec.getBoundingClientRect(), top = hdr.getBoundingClientRect().bottom; return cl((top - r.top) / Math.max(1, span())) * T; };
+  function size() {
+    dpr = Math.min(2, devicePixelRatio || 1); W = box.clientWidth; H = box.clientHeight;
+    cvR.width = Math.round(W * dpr); cvR.height = Math.round(H * dpr); kick();
+  }
+  function frame(now) {
+    raf = 0;
+    const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now;
+    tGoal = tOf();
+    const prev = tNow; tNow = still.matches ? tGoal : tNow + (tGoal - tNow) * Math.min(1, dt * 5.5);
+    vel = mix(vel, Math.abs(tNow - prev) / Math.max(.001, dt), .2);
+    cam = camAt(tNow);
+    x.setTransform(dpr, 0, 0, dpr, 0, 0); x.globalAlpha = 1; x.fillStyle = C.ground; x.fillRect(0, 0, W, H);
+    const dist = tNow < 1 ? 260 : 150, time = now / 1000;
+    sky(dist); road(tNow, time);
+    const faces = [];
+    BLD.forEach(b => b.parts.forEach(p => faces.push(...p.F)));
+    FILL.forEach(b => { const c = toC(b.parts[0].c); if (c[2] > -10 && c[2] < dist) b.parts.forEach(p => faces.push(...p.F)); });
+    drawFaces(faces, dist);
+    extras(time);
+    let best = -1, bw = 0;
+    STOP.forEach((S, k) => { const a = pull(k, tNow); glass(k, sm(.05, .6, a)); if (a > bw) { bw = a; best = k; } });
+    const near = bw > .5 ? best : -1;
+    if (near !== active) {
+      active = near;
+      ticks.forEach((b, i) => { if (i === active) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
+      hudN.textContent = active < 0 ? '—' : '0' + (active + 1) + ' / 0' + N;
+      if (active < 0) { hudT.dataset.i18n = 'run.k'; hudT.textContent = tr('run.k'); } else { hudT.removeAttribute('data-i18n'); hudT.textContent = panels[active].querySelector('h3').textContent; }
+    }
+    if (W > 520) minimap(tNow);
+    const ws = Math.max(warp, cl((vel - 1.5) / 6));                          // speed lines while warping or scrolling fast
+    if (ws > .02) {
+      x.lineWidth = 1.4;
+      for (let i = 0; i < 70; i++) {
+        const an = (i * 2.399) % TAU, u = (time * 2.2 + (i * .618) % 1) % 1, r0 = (60 + u * Math.max(W, H) * .7), len = 40 + ws * 260 * u;
+        x.globalAlpha = ws * Math.sin(u * Math.PI) * .8; x.strokeStyle = i % 4 ? C.ink2 : C.acc;
+        x.beginPath(); x.moveTo(W / 2 + Math.cos(an) * r0, H * .52 + Math.sin(an) * r0); x.lineTo(W / 2 + Math.cos(an) * (r0 + len), H * .52 + Math.sin(an) * (r0 + len)); x.stroke();
+      }
+    }
+    if (onScreen && current === 'about' && !document.hidden) raf = requestAnimationFrame(frame);
+  }
+  function kick() { if (!raf && onScreen) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+  const TAU = 6.2832;
+  function warpTo(k) {                                                      // fly to stop k: an eased scroll with speed lines
+    const goal = sec.getBoundingClientRect().top + scrollY - hdr.getBoundingClientRect().bottom + (TK[k] / T) * span(), from = scrollY;
+    if (still.matches) { scrollTo({ top: goal, behavior: 'instant' }); return; }
+    const t0 = performance.now(), dur = Math.min(1900, 700 + Math.abs(goal - from) / 6);
+    const step = now => {
+      const u = cl((now - t0) / dur); scrollTo({ top: mix(from, goal, eio(u)), behavior: 'instant' });
+      warp = Math.sin(u * Math.PI); kick();
+      if (u < 1) requestAnimationFrame(step); else { warp = 0; panels[k].focus({ preventScroll: true }); }
+    };
+    requestAnimationFrame(step);
+  }
+  $$('[data-run]').forEach(el => {
+    const go = () => warpTo(+el.dataset.run);
+    el.addEventListener('click', go);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  });
+  new IntersectionObserver(es => { onScreen = es[0].isIntersecting; kick(); }).observe(sec);
+  addEventListener('scroll', kick, { passive: true });
+  new ResizeObserver(size).observe(box);
+  document.addEventListener('viewchange', () => { tNow = tOf(); size(); });
   size();
   return { kick };
 })();
