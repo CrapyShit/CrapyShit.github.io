@@ -3328,12 +3328,12 @@ const run = (() => {
   /* the core: a cloud of stars (kind 3 twinkles), a faint shell whose rim reads as a ring, and a small yellow companion */
   for (let i = 0; i < 2600; i++) {
     const u = rnd(), v = rnd(), r = 1.2 + Math.pow(rnd(), 1.8) * 24, th = TAU * u, ph = Math.acos(2 * v - 1), p = [SPARK[0] + r * Math.sin(ph) * Math.cos(th), SPARK[1] + 4 + r * Math.cos(ph) * .7, SPARK[2] + r * Math.sin(ph) * Math.sin(th)];
-    const t2 = rnd(), c = t2 < .55 ? [1, .95, 1] : t2 < .8 ? [1, .55, .85] : t2 < .92 ? [1, .85, .45] : [.6, .75, 1];
+    const t2 = rnd(), c = t2 < .3 ? [1, 1, 1] : [[.29, .36, 1], [1, .35, .24], [.71, .94, 0], [1, .77, 0]][rnd() * 4 | 0];   // white and the site's four accents
     vtx(PT, p, [0, 0, 0], c, .55 + rnd() * .45, .07 + rnd() * .1, -2, 0, 3);
   }
   for (let i = 0; i < 2200; i++) {
     const u = rnd(), v = rnd(), th = TAU * u, ph = Math.acos(2 * v - 1), R = 26;
-    vtx(PT, [SPARK[0] + R * Math.sin(ph) * Math.cos(th), SPARK[1] + 4 + R * Math.cos(ph), SPARK[2] + R * Math.sin(ph) * Math.sin(th)], [0, 0, 0], [.9, .6, .85], .22, .09, -2, 0, 3);
+    vtx(PT, [SPARK[0] + R * Math.sin(ph) * Math.cos(th), SPARK[1] + 4 + R * Math.cos(ph), SPARK[2] + R * Math.sin(ph) * Math.sin(th)], [0, 0, 0], [[.29, .36, 1], [1, .35, .24], [.71, .94, 0], [1, .77, 0]][i % 4], .22, .09, -2, 0, 3);
   }
   /* lines: the floor grid (kind 6 takes the theme's line colour) and the adrift blocks (kind 5 turns them in the shader) */
   for (let gz = -12; gz < ZEND; gz += 3) for (let gx = -54; gx < 54; gx += 6) { vtx(LN, [xs(gz) + gx, 0, gz], [0, 0, 0], [U_LINE, 0, 0], .55, 0, -1, 0, 6); vtx(LN, [xs(gz) + gx + 6, 0, gz], [0, 0, 0], [U_LINE, 0, 0], .55, 0, -1, 0, 6); }
@@ -3448,12 +3448,14 @@ const run = (() => {
     fx.globalCompositeOperation = dark ? 'lighter' : 'source-over';
     const blob = (x2, y2, r, c0, a) => { const g2 = fx.createRadialGradient(x2, y2, 0, x2, y2, r); g2.addColorStop(0, c0); g2.addColorStop(1, 'rgba(0,0,0,0)'); fx.globalAlpha = a; fx.fillStyle = g2; fx.fillRect(x2 - r, y2 - r, r * 2, r * 2); };
     const s2 = Math.min(3, 40 / p[2]), Rn = Math.min(W, H) * .9 * Math.min(1.4, s2);
-    blob(p[0] - Rn * .3, p[1] - Rn * .1, Rn, 'rgba(150,40,110,1)', A0 * .32);              // the nebula: magenta and violet haze
-    blob(p[0] + Rn * .35, p[1] + Rn * .15, Rn * .8, 'rgba(110,40,150,1)', A0 * .26);
-    blob(p[0], p[1], Rn * .5, 'rgba(255,120,190,1)', A0 * .22);
+    blob(p[0] - Rn * .32, p[1] - Rn * .12, Rn * .85, '#4A5BFF', A0 * .26);               // the haze: the site's four accents
+    blob(p[0] + Rn * .34, p[1] - Rn * .08, Rn * .75, '#FF5A3D', A0 * .2);
+    blob(p[0] - Rn * .2, p[1] + Rn * .25, Rn * .7, '#B4F000', A0 * .14);
+    blob(p[0] + Rn * .25, p[1] + Rn * .28, Rn * .7, '#FFC400', A0 * .16);
+    blob(p[0], p[1], Rn * .45, C.acc, A0 * .22);
     blob(p[0], p[1], 90 * s2, '#ffffff', A0 * (.55 + .2 * pu));                            // the core
     blob(p[0], p[1], 26 * s2, '#ffffff', A0);
-    fx.save(); fx.translate(p[0], p[1]); fx.scale(1, .025); blob(0, 0, W * .45, 'rgba(255,220,255,1)', A0 * .8); fx.restore();   // the lens streak
+    fx.save(); fx.translate(p[0], p[1]); fx.scale(1, .025); blob(0, 0, W * .45, C.acc, A0 * .85); fx.restore();   // the lens streak
     const y = pj(add(CORE, [5.5, -6.5, 2])); if (y) { blob(y[0], y[1], 30 * s2, 'rgba(255,200,80,1)', A0 * .8); blob(y[0], y[1], 7 * s2, '#fff6d0', A0); }
     fx.globalCompositeOperation = 'source-over'; fx.globalAlpha = 1;
     const cap = $('#run-sp'), sw = sparkW(t);
@@ -3471,7 +3473,7 @@ const run = (() => {
     const rp = add(mul(cam.r, Math.cos(th)), mul(cam.f, Math.sin(th))), hw = mul(rp, ew * kk / 2), hh = mul(cam.u, eh * kk / 2);
     const P = [add(sub(Cw, hw), hh), add(add(Cw, hw), hh), sub(add(Cw, hw), hh), sub(sub(Cw, hw), hh)].map(pj);
     if (P.some(p => !p)) return;
-    x.globalAlpha = a * .5; x.fillStyle = C.ground; x.beginPath(); P.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.closePath(); x.fill();
+    x.globalAlpha = a * .92; x.fillStyle = C.ground; x.beginPath(); P.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.closePath(); x.fill();
     x.globalAlpha = a; x.strokeStyle = C.acc; x.lineWidth = 1.2; x.stroke();
     x.lineWidth = 2.4; x.beginPath(); P.forEach((p, i) => { const q = P[(i + 1) % 4], o = P[(i + 3) % 4]; x.moveTo(p[0] + (q[0] - p[0]) * .08, p[1] + (q[1] - p[1]) * .08); x.lineTo(p[0], p[1]); x.lineTo(p[0] + (o[0] - p[0]) * .08, p[1] + (o[1] - p[1]) * .08); }); x.stroke();
     const tb = pj(S.Tb);
