@@ -363,7 +363,8 @@ a.gtile:hover b{text-decoration:underline;text-decoration-color:var(--accent);te
 .run-st{position:sticky;top:var(--hdr);height:calc(100vh - var(--hdr));height:calc(100svh - var(--hdr));overflow:hidden;background:var(--ground)}
 #run-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 .run-p{position:absolute;left:0;top:0;width:26rem;display:grid;gap:.65rem;padding:1.5rem 1.6rem;transform-origin:0 0;will-change:transform,opacity;
-  visibility:hidden;opacity:0;background:color-mix(in srgb,var(--ground) 40%,transparent);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);outline:0}
+  visibility:hidden;opacity:0;background:color-mix(in srgb,var(--ground) 28%,transparent);-webkit-backdrop-filter:blur(1.5px);backdrop-filter:blur(1.5px);outline:0;
+  text-shadow:0 0 6px var(--ground),0 0 2px var(--ground)}
 .run-p h3{font-size:2.1rem;line-height:.95}
 .run-p .run-r{color:var(--accent)}
 .run-p .run-g{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
@@ -2982,7 +2983,7 @@ const run = (() => {
   const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   let seed = 7;
   const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-  const PW = 5.4, MONO = '"M PLUS 1 Code",ui-monospace,Menlo,Consolas,monospace';
+  const TAU = 6.2832, PW = 5.4, MONO = '"M PLUS 1 Code",ui-monospace,Menlo,Consolas,monospace';
   const LIME = '#C6FF1A';
 
   /* ----- the road: x(z) wanders left and right ----- */
@@ -2995,58 +2996,217 @@ const run = (() => {
     return { z, s, c, n, cam: add(c, add(mul(n, 7.2), [0, .25, 0])), b: [xs(z) + s * 13.5, 0, z + 5] };
   });
 
-  /* ----- geometry: boxes made of faces, plus decals ----- */
-  const B = [];                                                            // { faces, c (centre), r (radius), kind }
-  function boxF(cx, y0, cz, w, h, d, st) {
-    const hw = w / 2, hd = d / 2, F = [];
-    const face = (n, c, R, hw2, hh) => {                                   // R: right as seen from outside; up is y except for top/bottom
-      const U = Math.abs(n[1]) > .5 ? [0, 0, n[1] > 0 ? -1 : 1] : [0, 1, 0];
-      F.push({ n, pts: [add(c, add(mul(R, -hw2), mul(U, -hh))), add(c, add(mul(R, hw2), mul(U, -hh))), add(c, add(mul(R, hw2), mul(U, hh))), add(c, add(mul(R, -hw2), mul(U, hh)))], st, dec: [] });
-      return F[F.length - 1];
-    };
-    const cy = y0 + h / 2, out = {
-      px: face([1, 0, 0], [cx + hw, cy, cz], [0, 0, 1], hd, h / 2), nx: face([-1, 0, 0], [cx - hw, cy, cz], [0, 0, -1], hd, h / 2),
-      pz: face([0, 0, 1], [cx, cy, cz + hd], [-1, 0, 0], hw, h / 2), nz: face([0, 0, -1], [cx, cy, cz - hd], [1, 0, 0], hw, h / 2),
-      py: face([0, 1, 0], [cx, y0 + h, cz], [1, 0, 0], hw, hd)
-    };
-    out.F = F; out.c = [cx, cy, cz]; out.r = Math.hypot(hw, h / 2, hd);
-    return out;
+  /* ----- the kit: industrial sci-fi parts built as polygon meshes (after Marathon's props: rounded shells, capsule tanks,
+     bent hoses, crate walls, rails), all in a fixed palette. Each part is { F: faces, L: lines, c: centre, r: radius }. ----- */
+  const PAL = { white: '#E6E6E1', bone: '#CFCFC8', black: '#17191D', grey: '#5C6068', blue: '#2346D6', navy: '#151A3A', lime: LIME, orange: '#FF5B2B', teal: '#17867D',
+    pool: '#46D86A', yellow: '#F2D21B' };
+  const Lgt = unit([-.45, .8, -.4]);
+  /* a building is authored in a local frame (+x toward the road, z along it, y up) and turned 180° for the other side */
+  let XF = p => p, XV = v => v;
+  const setFrame = (bx, bz, fr) => { XF = p => [bx + fr * p[0], p[1], bz + fr * p[2]]; XV = v => [fr * v[0], v[1], fr * v[2]]; };
+  function part(F, L) {
+    let c = [0, 0, 0], n = 0;
+    F.forEach(f => f.pts.forEach(p => { c = add(c, p); n++; })); (L || []).forEach(l => l.pts.forEach(p => { c = add(c, p); n++; }));
+    c = mul(c, 1 / Math.max(1, n)); let r = 0;
+    F.forEach(f => f.pts.forEach(p => { r = Math.max(r, Math.hypot(p[0] - c[0], p[1] - c[1], p[2] - c[2])); }));
+    (L || []).forEach(l => l.pts.forEach(p => { r = Math.max(r, Math.hypot(p[0] - c[0], p[1] - c[1], p[2] - c[2])); }));
+    return { F, L: L || [], c, r };
   }
-  const ST = {                                                             // face styles: fill token, fill alpha, edge token, edge alpha
-    shell: ['panel', .82, 'ink2', .55], dark: ['ground', .9, 'ink2', .5], acc: ['acc', .5, 'acc', .95], cyan: ['glB', .38, 'glB', .9],
-    lime: [LIME, .7, LIME, .95], ghost: ['panel', .2, 'ink2', .35], wire: [null, 0, 'glB', .4], glass: ['ground', .18, 'acc', .9]
-  };
+  /* loft: rings of world points (closed loops of equal length); quads between rings, optional caps; normals pointed away from the axis */
+  function loft(rings, col, o = {}) {
+    const F = [], M = rings[0].length, cen = rings.map(R => mul(R.reduce((a, p) => add(a, p), [0, 0, 0]), 1 / M));
+    for (let i = 0; i < rings.length - 1; i++) for (let j = 0; j < M; j++) {
+      const a = rings[i][j], b = rings[i][(j + 1) % M], c2 = rings[i + 1][(j + 1) % M], d = rings[i + 1][j];
+      let n = cross(sub(b, a), sub(d, a)); if (Math.hypot(...n) < 1e-9) n = cross(sub(c2, b), sub(a, b));
+      n = unit(n); const mid = mul(add(add(a, b), add(c2, d)), .25), ax = mul(add(cen[i], cen[i + 1]), .5);
+      if (dot(n, sub(mid, ax)) < 0) n = mul(n, -1);
+      F.push({ pts: [a, b, c2, d], n, col, ea: o.ea || 0 });
+    }
+    const cap = (R, sgn) => { const n = unit(mul(sub(cen[rings.length - 1], cen[0]), sgn)); F.push({ pts: R.slice(), n, col: o.capCol || col, ea: o.ea || 0, cap: 1 }); };
+    if (o.cap0 !== false) cap(rings[0], -1);
+    if (o.cap1 !== false) cap(rings[rings.length - 1], 1);
+    return F;
+  }
+  function rrect(w, d, r, seg = 2) {                                        // a rounded rectangle, counter-clockwise
+    r = Math.max(.001, Math.min(r, w / 2 - .001, d / 2 - .001)); const P = [];
+    [[w / 2 - r, d / 2 - r, 0], [-w / 2 + r, d / 2 - r, 1], [-w / 2 + r, -d / 2 + r, 2], [w / 2 - r, -d / 2 + r, 3]].forEach(([cx, cy, q]) => {
+      for (let i = 0; i <= seg; i++) { const a = (q + i / seg) * Math.PI / 2; P.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
+    });
+    return P;
+  }
+  const circ = (r, n) => Array.from({ length: n }, (_, i) => [Math.cos(i / n * TAU) * r, Math.sin(i / n * TAU) * r]);
+  /* ring of 2D points placed on a local frame: origin o, section axes U, V */
+  const ring = (P, o, U, V, k = 1) => P.map(([a, b]) => XF(add(o, add(mul(U, a * k), mul(V, b * k)))));
+  /* a rounded box along an axis A ('x', 'y' or 'z'): base centre o, length len, section w by d, corner radius r, bevel b at the ends */
+  const AX = { y: [[0, 1, 0], [1, 0, 0], [0, 0, 1]], x: [[1, 0, 0], [0, 0, 1], [0, 1, 0]], z: [[0, 0, 1], [1, 0, 0], [0, 1, 0]] };
+  function rbox(o, ax, len, w, d, r, b, col, opt = {}) {
+    const [A, U, V] = AX[ax], seg = opt.seg || 2, S = rrect(w, d, r, seg), Si = rrect(Math.max(.05, w - 2 * b), Math.max(.05, d - 2 * b), Math.max(.02, r - b * .6), seg);
+    const at = t => add(o, mul(A, t)), R = b > 0 ? [ring(Si, at(0), U, V), ring(S, at(b), U, V), ring(S, at(len - b), U, V), ring(Si, at(len), U, V)] : [ring(S, at(0), U, V), ring(S, at(len), U, V)];
+    return part(loft(R, col, opt));
+  }
+  /* a capsule / cylinder along an axis: radius rad, length len (dome ends included when dome) */
+  function tank(o, ax, len, rad, col, dome = true, n = 16) {
+    const [A, U, V] = AX[ax], S = circ(1, n), R = [], at = t => add(o, mul(A, t));
+    if (dome) {
+      for (let i = 0; i <= 4; i++) { const a = -Math.PI / 2 + i / 4 * Math.PI / 2; R.push(ring(S, at(rad + Math.sin(a) * rad), U, V, Math.max(.02, Math.cos(a) * rad))); }
+      for (let i = 0; i <= 4; i++) { const a = i / 4 * Math.PI / 2; R.push(ring(S, at(len - rad + Math.sin(a) * rad), U, V, Math.max(.02, Math.cos(a) * rad))); }
+    } else R.push(ring(S, at(0), U, V, rad), ring(S, at(len), U, V, rad));
+    return part(loft(R, col));
+  }
+  /* a hose or pipe along a path of local points (corners rounded), radius rad */
+  function tube(path, rad, col, n = 7, rr = .6) {
+    const P = [path[0]];
+    for (let i = 1; i < path.length - 1; i++) {
+      const a = path[i - 1], b = path[i], c2 = path[i + 1], la = Math.hypot(...sub(b, a)), lc = Math.hypot(...sub(c2, b)), k = Math.min(rr, la / 2, lc / 2);
+      const p0 = add(b, mul(unit(sub(a, b)), k)), p1 = add(b, mul(unit(sub(c2, b)), k));
+      for (let s = 0; s <= 4; s++) { const u = s / 4; P.push(add(add(mul(p0, (1 - u) * (1 - u)), mul(b, 2 * u * (1 - u))), mul(p1, u * u))); }
+    }
+    P.push(path[path.length - 1]);
+    let T = unit(sub(P[1], P[0])), Nn = unit(cross(T, Math.abs(T[1]) < .9 ? [0, 1, 0] : [1, 0, 0])); const R = [], S = circ(rad, n);
+    P.forEach((p, i) => {
+      const T2 = unit(sub(P[Math.min(P.length - 1, i + 1)], P[Math.max(0, i - 1)]));
+      Nn = unit(sub(Nn, mul(T2, dot(Nn, T2)))); const Bn = cross(T2, Nn); T = T2;   // parallel transport
+      R.push(S.map(([a, b]) => XF(add(p, add(mul(Nn, a), mul(Bn, b))))));
+    });
+    return part(loft(R, col));
+  }
+  function torus(c, R0, rad, col, n = 30) { const P = Array.from({ length: n + 1 }, (_, i) => [c[0] + Math.cos(i / n * TAU) * R0, c[1], c[2] + Math.sin(i / n * TAU) * R0]); return tube(P, rad, col, 7, 0); }
+  /* a flat decal plate on a surface: centre c, outward normal n (local), width w by height h; decals d */
+  function plate(c, n, w, h, decs, fill) {
+    const N = XV(n), up = Math.abs(n[1]) > .9 ? XV([0, 0, -1]) : [0, 1, 0], Rt = unit(cross(up, mul(N, -1))), C0 = XF(c);
+    const pts = [add(C0, add(mul(Rt, -w / 2), mul(up, -h / 2))), add(C0, add(mul(Rt, w / 2), mul(up, -h / 2))), add(C0, add(mul(Rt, w / 2), mul(up, h / 2))), add(C0, add(mul(Rt, -w / 2), mul(up, h / 2)))];
+    return part([{ pts, n: N, col: fill || null, ea: 0, dec: decs, plate: 1 }]);
+  }
+  function rail(pts, h, col = PAL.grey) {                                   // posts and two rails along a local polyline
+    const L = [], W = pts.map(XF);
+    for (let i = 0; i < W.length - 1; i++) {
+      const a = W[i], b = W[i + 1], n = Math.max(1, Math.round(Math.hypot(...sub(b, a)) / 1.1));
+      for (let k = 0; k <= n; k++) { const p = add(a, mul(sub(b, a), k / n)); L.push({ pts: [p, add(p, [0, h, 0])], col }); }
+      L.push({ pts: [add(a, [0, h, 0]), add(b, [0, h, 0])], col }, { pts: [add(a, [0, h * .5, 0]), add(b, [0, h * .5, 0])], col });
+    }
+    return part([], L);
+  }
+  const lines = (L, col) => part([], L.map(([a, b]) => ({ pts: [XF(a), XF(b)], col })));
+  const FRONT = [1, 0, 0];
+
+  /* ----- the five buildings, one per CV entry ----- */
   function building(k) {
-    const S = STOP[k], s = S.s, [bx, , bz] = S.b, fr = -s, parts = [];
-    const P = (cx, y0, cz, w, h, d, st) => { const b = boxF(cx, y0, cz, w, h, d, st); parts.push(b); return b; };
-    const front = b => (fr > 0 ? b.px : b.nx);                              // the face turned to the road
-    P(bx, 0, bz, 10, .9, 9, 'dark');                                        // plinth
-    const plinth = parts[0]; front(plinth).dec.push({ t: 'stripes', u0: .04, v0: .2, u1: .3, v1: .8, col: LIME });
-    const core = P(bx + s * 2.2, .9, bz + 1.5, 4.2, 9 + k * .6, 4.2, 'shell');
-    front(core).dec.push({ t: 'text', s: '0' + (k + 1), u0: .12, v0: .06, u1: .9, v1: .3, col: 'ink', font: 'display' });
-    const m1 = P(bx - s * .8, 2.6, bz - .6, 6.4, 2.6, 5.2, k % 2 ? 'cyan' : 'acc');   // cantilevered modules, pushed toward the road
-    front(m1).dec.push({ t: 'grid', u0: .06, v0: .18, u1: .62, v1: .82, col: 'ink' });
-    const m2 = P(bx - s * 1.9, 5.6 + k * .3, bz + .4, 7.6, 2.4, 4.6, 'shell');
-    front(m2).dec.push({ t: 'text', s: S.code, u0: .05, v0: .12, u1: .55, v1: .55, col: 'ink', font: 'mono' });
-    if (k % 2 === 0) front(m2).dec.push({ t: 'logo', u0: .7, v0: .14, u1: .93, v1: .86 });   // the site's mark, on every other building
-    const m3 = P(bx + s * .6, 8.4 + k * .4, bz - 1.2, 5, 1.8, 4, k % 2 ? 'acc' : 'lime');
-    front(m3).dec.push({ t: 'stripes', u0: .55, v0: .15, u1: .95, v1: .85, col: 'ink' });
-    P(bx - s * 3.6, 1.2, bz - 3.4, .35, .35, 7.5, 'lime');                  // a pipe along the front, and one riser
-    P(bx - s * 3.6, 1.2, bz - 3.4, .35, 4.6, .35, 'lime');
-    P(bx + s * 3.6, .9, bz - 3.1, 1.6, 1.4, 1.6, 'cyan'); P(bx + s * 1.4, .9, bz - 3.6, 1.2, 1, 1.2, 'shell');   // crates
-    const top = 9.9 + k * .6;
-    return { parts, mast: [bx + s * 2.2, top, bz + 1.5, 4.5], tags: [[bx - s * 4, 4.4, bz - 3], [bx + s * 3, top + 1, bz + 2]].map((p, i) => ({ p, s: ['72', '107', '42', '15pH', '82', '66-7k', '90', '23', '5', '33R'][(k * 2 + i) % 10] })) };
+    const S = STOP[k], fr = -S.s, P = [], add2 = q => { P.push(q); return q; }, code = S.code;
+    setFrame(S.b[0], S.b[2], fr);
+    let mast = [0, 10, 0, 4], tags = [[4, 4, -4], [-2, 9, 3]];
+    if (k === 0) {                                                          // the ARK basin: a ring pool with a capsule column and a boom
+      add2(rbox([-.5, 0, 0], 'y', 1.7, 11, 12.5, 2.2, .3, PAL.white, { seg: 3 }));
+      add2(tank([-.8, 1.55, 0], 'y', .12, 4, PAL.pool, false, 28));
+      add2(torus([-.8, 1.75, 0], 4.25, .42, PAL.white));
+      add2(torus([-.8, 2.1, 0], 4.25, .14, PAL.orange));
+      add2(rbox([-.8, 1.6, -3.9], 'z', 7.8, .5, .3, .1, 0, PAL.bone)); add2(rbox([-4.6, 1.6, 0], 'x', 7.6, 7.8 / 7.8 * .5, .3, .1, 0, PAL.bone));
+      add2(tank([-.8, 1.7, 0], 'y', 5.4, .75, PAL.white, true, 18));
+      add2(tank([-.8, 3.6, 0], 'y', .7, .95, PAL.black, false, 18));
+      add2(tube([[-.8, 3.6, 0], [1.4, 2, .9], [2.6, 1.8, 1.4]], .2, PAL.yellow, 7, .4));
+      add2(tube([[-.8, 4.6, 0], [3.2, 4.6, 0], [3.6, 4.6, 3.2], [3.6, 1.6, 3.6]], .22, PAL.black, 8, .7));
+      add2(rbox([3.4, 0, 3.6], 'y', 1.9, 3.6, 4.4, .8, .2, PAL.white));
+      add2(plate([3.4, 1.92, 3.6], [0, 1, 0], 3.2, 4, [{ t: 'seams', col: PAL.black }], PAL.orange));
+      add2(rail([[1.8, 1.9, 1.6], [5, 1.9, 1.6], [5, 1.9, 5.6]], 1.1));
+      add2(tank([4.6, 1.7, -2.6], 'y', .35, .45, PAL.teal, false, 12));
+      add2(plate([5.03, .9, .2], FRONT, 4.6, 1.1, [{ t: 'pix', s: code, col: PAL.black }]));
+      add2(plate([5.03, .85, -3.2], FRONT, 1.4, 1.1, [{ t: 'stripes', col: PAL.black }]));
+      add2(plate([5.23, .95, 3.6], FRONT, 1.2, 1.2, [{ t: 'logo' }]));
+      add2(plate([-.05, 3, 0], FRONT, .9, 1.4, [{ t: 'pix', s: '0' + (k + 1), col: PAL.black }]));
+      mast = [-.8, 7.1, 0, 2.5]; tags = [[3.4, 3.4, 3.6], [-.8, 8.6, 0]];
+    } else if (k === 1) {                                                   // a crate wall: white crates with blue lids in a blue frame, a few pulled out
+      const cw = 2.6, ch = 1.9;
+      for (let iz = 0; iz < 5; iz++) for (let iy = 0; iy < 3; iy++) {
+        if ((iz === 2 && iy === 0) || (iz === 3 && iy === 1)) {             // gaps, with the yellow cargo inside
+          for (let q = 0; q < 3; q++) add2(tank([0, iy * (ch + .25) + .55, -6.2 + iz * (cw + .2) + .55 + q * .7], 'y', 1, .22, PAL.yellow, true, 8));
+          continue;
+        }
+        const z = -6.5 + iz * (cw + .2) + cw / 2, y = iy * (ch + .25) + .3;
+        add2(rbox([-.4, y, z], 'y', ch, 3.6, cw, .28, .14, PAL.white, { seg: 1 }));
+        add2(rbox([-.4, y + ch - .05, z], 'y', .28, 3.7, cw * .82, .2, .08, PAL.blue, { seg: 1 }));
+        add2(plate([1.42, y + ch * .5, z], FRONT, cw * .8, ch * .7, [{ t: 'seams', col: PAL.black }, { t: 'pix', s: String(iy * 5 + iz + 11), col: PAL.black, u0: .06, v0: .08, u1: .3, v1: .32 }, { t: 'grille', col: PAL.black, u0: .78, v0: .7, u1: .95, v1: .92 }]));
+      }
+      for (let iz = 0; iz <= 5; iz++) add2(rbox([1.5, 0, -6.6 + iz * (cw + .2)], 'y', 3 * (ch + .25) + .4, .3, .3, .05, 0, PAL.blue, { seg: 1 }));
+      for (let iy = 0; iy <= 3; iy++) add2(rbox([1.5, iy * (ch + .25) + .2, -6.6], 'z', 5 * (cw + .2), .3, .22, .05, 0, PAL.blue, { seg: 1 }));
+      add2(rbox([4.4, 0, 1.8], 'y', ch * .9, 3, 2.3, .28, .14, PAL.white, { seg: 1 })); add2(rbox([4.4, ch * .9 - .05, 1.8], 'y', .25, 3.1, 1.9, .2, .08, PAL.blue, { seg: 1 }));
+      add2(rbox([3.6, 0, -2.9], 'x', 2.2, 2.4, 1.7, .25, .12, PAL.white, { seg: 1 }));
+      for (let q = 0; q < 4; q++) add2(tank([5.8 + q * .25, 0, -1 + q * .9], 'y', .9, .2, PAL.yellow, true, 8));
+      add2(rbox([1.2, 6.8, 0], 'y', 1.6, .4, 9, .12, .05, PAL.white, { seg: 1 }));
+      add2(plate([1.42, 7.6, -1], FRONT, 4.4, 1.1, [{ t: 'pix', s: code, col: PAL.blue }]));
+      add2(plate([1.42, 7.6, 3.4], FRONT, 1.1, 1.1, [{ t: 'stripes', col: PAL.blue }]));
+      mast = [-.4, 7.3, -5, 3]; tags = [[4.4, 2.6, 1.8], [1.5, 7.9, 5]];
+    } else if (k === 2) {                                                   // a locker bar: a long rounded shell with a padded top, doors and a hose
+      add2(rbox([0, .45, -7], 'z', 14, 3, .9, .2, 0, PAL.black, { seg: 1 }));
+      add2(rbox([0, 2.6, -6.8], 'z', 13.6, 3.6, 3.4, 1.1, .35, PAL.white, { seg: 3 }));
+      add2(rbox([-.2, 4.65, -6.4], 'z', 12.8, 2.9, .75, .35, .2, PAL.navy, { seg: 2 }));
+      add2(tube([[1.25, 5.2, -6.8], [1.25, 5.2, -2], [1.5, 5.9, -.5], [1.25, 5.2, 1.5], [1.25, 5.2, 6.8]], .16, PAL.grey, 7, .8));
+      [-4.6, 2.2].forEach(z => add2(rbox([1.3, 5.02, z], 'y', .6, .6, .6, .12, .06, PAL.blue, { seg: 1 })));
+      add2(plate([1.82, 2.6, -4.4], FRONT, 2.2, 2.3, [{ t: 'door', col: PAL.blue }, { t: 'pix', s: '2', col: PAL.black, u0: .08, v0: .55, u1: .3, v1: .92 }]));
+      add2(plate([1.82, 2.6, 1.2], FRONT, 3.6, 2.3, [{ t: 'seams', col: PAL.grey }, { t: 'plus', col: PAL.black }, { t: 'door', col: PAL.blue, u0: .38, v0: .25, u1: .7, v1: .75 }]));
+      add2(plate([1.82, 2.5, 4.9], FRONT, 2.2, 2.3, [{ t: 'door', col: PAL.blue }, { t: 'pix', s: '1', col: PAL.black, u0: .08, v0: .55, u1: .3, v1: .92 }]));
+      add2(plate([1.82, 2.6, -1.5], FRONT, 2.6, 2.1, [{ t: 'pix', s: code.split('-')[0], col: PAL.black, u0: 0, v0: .05, u1: 1, v1: .6 }, { t: 'stripes', col: PAL.black, u0: 0, v0: .7, u1: .35, v1: 1 }]));
+      add2(rbox([-3.6, 0, 2.5], 'y', 8.5, 3.4, 3.4, .9, .3, PAL.bone, { seg: 2 }));
+      add2(rbox([-3.6, 8.5, 2.5], 'y', .9, 3.8, 3.8, .5, .2, PAL.black, { seg: 2 }));
+      add2(plate([-1.88, 6.5, 2.5], FRONT, 2.4, 2, [{ t: 'logo' }]));
+      add2(plate([-1.88, 3.6, 2.5], FRONT, 2.4, 1.2, [{ t: 'pix', s: '0' + (k + 1), col: PAL.black }]));
+      mast = [-3.6, 9.4, 2.5, 3]; tags = [[1, 5.4, -1], [-3.6, 10.5, 5]];
+    } else if (k === 3) {                                                   // a tank unit: a white capsule on a black base, end blocks, an orange camera and a hose
+      add2(rbox([0, .65, -6.4], 'z', 12.8, 3.2, 1.3, .35, .1, PAL.black, { seg: 2 }));
+      add2(tank([0, 3.4, -5.2], 'z', 9.8, 2.05, PAL.white, true, 22));
+      add2(rbox([0, 0, -7.4], 'y', 5.2, 3.6, 2.6, .35, .15, PAL.black, { seg: 2 }));
+      add2(rbox([0, 5.2, -7.4], 'y', .5, 3.6, 2.6, .35, .15, PAL.orange, { seg: 2 }));
+      add2(tank([0, 5.7, -7.4], 'y', .35, 1, PAL.teal, false, 16));
+      add2(rbox([0, 0, 5.4], 'y', 5.6, 3.1, 2.4, .3, .15, PAL.bone, { seg: 2 }));
+      add2(tank([-.2, 1.3, -4.6], 'y', 2.6, .8, PAL.teal, false, 14));
+      add2(rbox([0, 5.35, -1], 'y', 1.1, 1.4, 1.2, .2, .1, PAL.orange, { seg: 1 }));
+      add2(tank([.7, 5.9, -1], 'x', .25, .3, PAL.black, false, 12));
+      add2(tube([[1.9, 1.6, -7.2], [2.6, 1, -6.4], [3.4, .25, -4.5], [3.2, .25, -1], [2.6, .25, 1.4]], .26, PAL.teal, 8, .9));
+      [-2.9, 2.9].forEach(x2 => add2(tube([[x2 * .55, 4.5, -5.6], [x2 * .7, 2.6, -1], [x2 * .7, 2.6, 2.5], [x2 * .55, 4.4, 4]], .07, PAL.teal, 5, 1)));
+      add2(plate([2.08, 3.5, -.2], FRONT, 6.2, 2.6, [{ t: 'pix', s: code.replace('-', ''), col: PAL.black }]));
+      add2(plate([1.82, 2.6, -7.4], FRONT, 2.2, 2.6, [{ t: 'seams', col: PAL.grey }, { t: 'plus', col: PAL.white }, { t: 'grille', col: PAL.orange, u0: .1, v0: .6, u1: .45, v1: .9 }]));
+      add2(plate([1.57, 3, 5.4], FRONT, 2, 4, [{ t: 'stripes', col: PAL.black, u0: 0, v0: .45, u1: 1, v1: 1 }, { t: 'pix', s: '0' + (k + 1), col: PAL.black, u0: .1, v0: .05, u1: .9, v1: .35 }]));
+      add2(plate([1.62, .65, 0], FRONT, 9, .5, [{ t: 'tags', s: 'LOCK', col: PAL.white }]));
+      mast = [0, 6.3, -7.4, 2.4]; tags = [[0, 7.3, -1], [2, 4, 6]];
+    } else {                                                                // a stacked research tower: lime and black modules, cantilevers, pipes, a roof rail
+      add2(rbox([0, 0, 0], 'y', 1, 11, 10, .6, .2, PAL.black, { seg: 1 }));
+      add2(plate([5.52, .5, -3], FRONT, 3, .7, [{ t: 'stripes', col: PAL.lime }]));
+      add2(rbox([-2.4, 1, 1.4], 'y', 10.5, 4.6, 4.6, .9, .3, PAL.white, { seg: 2 }));
+      add2(rbox([.6, 2.4, -.8], 'z', 6.4, 6, 2.8, .7, .3, PAL.lime, { seg: 2 }));
+      add2(plate([3.62, 2.4, 2.4], FRONT, 4.6, 1.8, [{ t: 'seams', col: PAL.black }, { t: 'pix', s: code, col: PAL.black, u0: .05, v0: .1, u1: .7, v1: .6 }]));
+      add2(rbox([1.4, 5.6, -1.6], 'z', 6, 7.4, 2.4, .6, .25, PAL.black, { seg: 2 }));
+      add2(plate([5.12, 5.6, 1.4], FRONT, 3, 1.6, [{ t: 'logo', u0: 0, v0: 0, u1: .35, v1: 1 }, { t: 'tags', s: 'KOTSUDO', col: PAL.white, u0: .4, v0: .3, u1: 1, v1: .7 }]));
+      add2(rbox([-.6, 8.3, .2], 'z', 4.4, 5, 2, .5, .2, PAL.lime, { seg: 2 }));
+      add2(plate([1.92, 8.3, 2.4], FRONT, 3.8, 1.4, [{ t: 'stripes', col: PAL.black, u0: .6, v0: 0, u1: 1, v1: 1 }, { t: 'pix', s: '0' + (k + 1), col: PAL.black, u0: 0, v0: .05, u1: .5, v1: .95 }]));
+      add2(tube([[4.2, 1, -4.6], [4.2, 2.2, -4.6], [4.2, 2.2, -1.4], [4.2, 4.1, -1.9], [5.5, 4.1, -1.9], [5.5, 7.4, -1.9]], .2, PAL.lime, 7, .7));
+      add2(tube([[-4.9, 1, -2.4], [-4.9, 11.3, -2.4], [-2.4, 11.3, -2.4]], .24, PAL.grey, 7, .7));
+      add2(rail([[-4.6, 11.5, -.8], [-.2, 11.5, -.8], [-.2, 11.5, 3.6], [-4.6, 11.5, 3.6]], 1));
+      add2(tank([-3.4, 11.5, 2.6], 'y', .8, .55, PAL.orange, false, 12));
+      mast = [-2.4, 11.5, 1.4, 4.5]; tags = [[3.6, 5, 4], [-2.4, 14, 3]];
+    }
+    return { parts: P, mast: [...XF(mast.slice(0, 3)), mast[3]], tags: tags.map((p, i) => ({ p: XF(p), s: ['72', '107', '42', '15pH', '82', '66-7k', '90', '23', '5', '33R'][(k * 2 + i) % 10] })) };
   }
-  STOP.forEach((S, k) => { S.code = ['ISD-20', 'MTH-22', 'ZAG-23', 'MC-23', 'TUT-25'][k] || 'S-' + k; });
+  STOP.forEach((S, k) => { S.code = ['ARK-20', 'MTH-22', 'ZAG-23', 'MC-23', 'TUT-25'][k] || 'S-' + k; });
   const BLD = STOP.map((S, k) => building(k));
-  const FILL = [];                                                          // the rest of the district: plain blocks either side
-  for (let z = -10; z < ZEND + 30; z += 7 + rnd() * 5) [-1, 1].forEach(s => {
-    if (STOP.some(S => S.s === s && Math.abs(S.z + 5 - z) < 13)) return;
-    const x0 = xs(z) + s * (9 + rnd() * 8), w = 3 + rnd() * 4, d = 3 + rnd() * 4, h = 2 + rnd() * 7, st = rnd() < .14 ? 'acc' : rnd() < .2 ? 'cyan' : rnd() < .5 ? 'shell' : 'dark';
-    const b = boxF(x0, 0, z, w, h, d, st), parts = [b];
-    if (rnd() < .5) parts.push(boxF(x0 - s * rnd() * 1.2, h, z + (rnd() - .5) * 1.5, w * (.5 + rnd() * .4), 1 + rnd() * 2.4, d * (.5 + rnd() * .5), rnd() < .3 ? 'lime' : 'shell'));
-    if (rnd() < .25) (s > 0 ? b.nx : b.px).dec.push({ t: 'stripes', u0: .1, v0: .1, u1: .4, v1: .9, col: rnd() < .5 ? LIME : 'ink' });
-    FILL.push({ parts });
+  /* the rest of the district: a kit of props either side (crate stacks, containers, small tanks, towers), lighter on detail */
+  const FILL = [], KITC = [PAL.white, PAL.white, PAL.bone, PAL.black, PAL.blue, PAL.lime, PAL.orange];
+  for (let z = -10; z < ZEND + 30; z += 8 + rnd() * 5) [-1, 1].forEach(s => {
+    if (STOP.some(S => S.s === s && Math.abs(S.z + 5 - z) < 14)) return;
+    const bx = xs(z) + s * (10 + rnd() * 7), P = [], c0 = KITC[rnd() * KITC.length | 0], kind = rnd();
+    setFrame(bx, z, -s);
+    if (kind < .3) {                                                        // a crate stack
+      const nx = 1 + (rnd() * 2 | 0), ny = 1 + (rnd() * 3 | 0);
+      for (let a = 0; a < nx; a++) for (let b = 0; b < ny - (a ? 1 : 0); b++) {
+        P.push(rbox([0, b * 1.95, a * 2.7 - 1.3], 'y', 1.85, 3.2, 2.5, .28, .14, PAL.white, { seg: 1 }), rbox([0, b * 1.95 + 1.8, a * 2.7 - 1.3], 'y', .25, 3.3, 2, .2, .08, c0 === PAL.white ? PAL.blue : c0, { seg: 1 }));
+      }
+    } else if (kind < .55) {                                                // a long container lying along the road
+      const L = 5 + rnd() * 5; P.push(rbox([0, 0, -L / 2], 'z', L, 2.8, 2.6, .7, .25, c0, { seg: 2 }));
+      if (rnd() < .6) P.push(plate([1.42, 1.3, 0], FRONT, Math.min(3, L * .4), 1.3, [{ t: 'stripes', col: c0 === PAL.black ? PAL.white : PAL.black }]));
+    } else if (kind < .75) {                                                // a capsule tank on a cradle
+      P.push(rbox([0, 0, -3], 'z', 6, 2.4, .8, .2, 0, PAL.black, { seg: 1 }), tank([0, 2.2, -3.2], 'z', 6.4, 1.4, rnd() < .5 ? PAL.white : PAL.bone, true, 14));
+    } else {                                                                // a tower block with a cap
+      const h = 6 + rnd() * 8; P.push(rbox([0, 0, 0], 'y', h, 3.6, 3.6, .8, .25, c0, { seg: 2 }), rbox([0, h, 0], 'y', .8, 4, 4, .5, .15, c0 === PAL.black ? PAL.lime : PAL.black, { seg: 1 }));
+      if (rnd() < .5) P.push(plate([1.82, h * .45, 0], FRONT, 2.6, 1.6, [{ t: 'grille', col: c0 === PAL.black ? PAL.white : PAL.black }]));
+    }
+    FILL.push({ parts: P, c: [bx, 3, z] });
   });
   const SKY = [];                                                           // a wire city further out
   for (let i = 0; i < 90; i++) { const s = rnd() < .5 ? -1 : 1, z = -20 + rnd() * (ZEND + 60); SKY.push({ x: xs(z) + s * (26 + rnd() * 40), z, w: 3 + rnd() * 6, d: 3 + rnd() * 6, h: 6 + rnd() * 26 }); }
@@ -3095,31 +3255,63 @@ const run = (() => {
   function camAt(t) {
     const u = ukey(t), E0 = [xs(u) - (xs(u + 12) - xs(u)) * .25, 2.6, u], T0 = [xs(u + 14), 1.1, u + 14];
     let E = E0, Tg = T0;
-    const D = Math.max(7.2, .95 * H * PW / (.8 * Math.max(1, W)));        // far enough back that the pane fits the width
-    STOP.forEach((S, k) => { const w = eio(pull(k, t)); if (w > 0) { E = mixV(E, add(S.c, add(mul(S.n, D), [0, .25, 0])), w); Tg = mixV(Tg, S.c, w); } });
+    const D = Math.max(10.5, .95 * H * PW / (.62 * Math.max(1, W)));       // far enough back to take in the pane and the building behind it
+    STOP.forEach((S, k) => { const w = eio(pull(k, t)); if (w > 0) { E = mixV(E, add(S.c, add(mul(S.n, D), [0, 1.3, 0])), w); Tg = mixV(Tg, mixV(S.c, [S.b[0], 4.5, S.b[2]], .32), w); } });
     const o = 1 - eio(sm(0, 1.05, t));                                      // the start: a high, tilted map of the whole road
     if (o > 0) { const mid = ZEND * .42; E = mixV(E, [xs(mid) + 52, 74, mid - 70], o); Tg = mixV(Tg, [xs(mid), 0, mid + 6], o); }
     return look(E, Tg);
   }
 
   /* ----- drawing ----- */
+  /* ----- drawing the kit: flat shading from one light, haze toward the ground colour, decals through an affine map ----- */
+  const RGB = {};
+  function rgb(c) {
+    if (RGB[c]) return RGB[c];
+    let v = [128, 128, 128];
+    const m = String(c).trim();
+    if (m[0] === '#') { let h = m.slice(1); if (h.length === 3) h = h.replace(/./g, '$&$&'); const n = parseInt(h.slice(0, 6), 16); v = [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+    else { const q = m.match(/[\d.]+/g); if (q) v = q.slice(0, 3).map(Number); }
+    return (RGB[c] = v);
+  }
   const col = c => (c === LIME ? LIME : C[c] || c);
-  function decal(d, p3, U, V) {                                            // a flat thing on a face, drawn through an affine map of its rectangle
-    const o = [p3[0] + U[0] * d.u0 + V[0] * d.v0, p3[1] + U[1] * d.u0 + V[1] * d.v0], du = d.u1 - d.u0, dv = d.v1 - d.v0;
+  const PIX = {                                                             // a 5x7 pixel face for the serials
+    '0': '01110100011001110101110011000101110', '1': '00100011000010000100001000010001110', '2': '01110100010000100010001000100011111', '3': '11110000010000101110000010000111110',
+    '4': '00010001100101010010111110001000010', '5': '11111100001111000001000011000101110', '6': '00110010001000011110100011000101110', '7': '11111000010001000100010000100001000',
+    '8': '01110100011000101110100011000101110', '9': '01110100011000101111000010001001100', 'A': '01110100011000111111100011000110001', 'B': '11110100011000111110100011000111110',
+    'C': '01110100011000010000100001000101110', 'D': '11110100011000110001100011000111110', 'E': '11111100001000011110100001000011111', 'G': '01110100011000010111100011000101111',
+    'H': '10001100011000111111100011000110001', 'I': '01110001000010000100001000010001110', 'K': '10001100101010011000101001001010001', 'L': '10000100001000010000100001000011111',
+    'M': '10001110111010110101100011000110001', 'N': '10001110011010110011100011000110001', 'O': '01110100011000110001100011000101110', 'P': '11110100011000111110100001000010000',
+    'R': '11110100011000111110101001001010001', 'S': '01111100001000001110000010000111110', 'T': '11111001000010000100001000010000100', 'U': '10001100011000110001100011000101110',
+    'Y': '10001100010101000100001000010000100', 'Z': '11111000010001000100010001000011111', 'X': '10001100010101000100010101000110001', '-': '00000000000000011111000000000000000', ' ': '0'.repeat(35)
+  };
+  function decal(d, p3, U, V) {
+    const u0 = d.u0 == null ? 0 : d.u0, v0 = d.v0 == null ? 0 : d.v0, du = (d.u1 == null ? 1 : d.u1) - u0, dv = (d.v1 == null ? 1 : d.v1) - v0;
+    const o = [p3[0] + U[0] * u0 + V[0] * v0, p3[1] + U[1] * u0 + V[1] * v0];
+    const sx = Math.hypot(U[0], U[1]) * du, sy = Math.hypot(V[0], V[1]) * dv;
+    if (sx < 3 || sy < 2) return;
     const a = U[0] * du / 100, b = U[1] * du / 100, c = V[0] * dv / 100, e = V[1] * dv / 100;
     x.save(); x.setTransform(dpr * a, dpr * b, dpr * c, dpr * e, dpr * o[0], dpr * o[1]);
+    x.fillStyle = col(d.col || PAL.black); x.strokeStyle = x.fillStyle;
     if (d.t === 'stripes') {
-      x.beginPath(); x.rect(0, 0, 100, 100); x.clip(); x.fillStyle = col(d.col); x.globalAlpha *= .85;
+      x.beginPath(); x.rect(0, 0, 100, 100); x.clip();
       for (let i = -100; i < 200; i += 22) { x.beginPath(); x.moveTo(i, 100); x.lineTo(i + 11, 100); x.lineTo(i + 111, 0); x.lineTo(i + 100, 0); x.closePath(); x.fill(); }
-    } else if (d.t === 'grid') {
-      x.strokeStyle = col(d.col); x.lineWidth = 2; x.globalAlpha *= .6;
-      for (let i = 0; i <= 100; i += 12.5) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 100); x.moveTo(0, i); x.lineTo(100, i); x.stroke(); }
-    } else if (d.t === 'text') {
-      x.fillStyle = col(d.col); x.textBaseline = 'middle'; x.textAlign = 'left';
-      const fam = d.font === 'display' ? getComputedStyle(root).getPropertyValue('--display') || MONO : MONO;
-      x.font = '800 ' + (d.font === 'display' ? 92 : 46) + 'px ' + fam;
-      const w = x.measureText(d.s).width, k = Math.min(1, 100 / Math.max(1, w));
-      x.scale(k, 1); x.fillText(d.s, 0, 50);
+    } else if (d.t === 'pix') {                                             // blocky serial, square pixels, fitted to the box
+      const t = String(d.s).toUpperCase(), n = t.length, k = Math.min(sx / (n * 6 - 1), sy / 7), kU = k / sx * 100, kV = k / sy * 100;
+      const ox = (100 - kU * (n * 6 - 1)) / 2, oy = (100 - kV * 7) / 2;
+      [...t].forEach((ch, i) => { const gl = PIX[ch] || PIX[' ']; for (let r = 0; r < 7; r++) for (let q = 0; q < 5; q++) if (gl[r * 5 + q] === '1') x.fillRect(ox + (i * 6 + q) * kU, oy + r * kV, kU * 1.04, kV * 1.04); });
+    } else if (d.t === 'seams') {                                           // panel lines and corner screws
+      x.lineWidth = 1.6; x.globalAlpha *= .55; x.strokeRect(3, 3, 94, 94); x.beginPath(); x.moveTo(3, 64); x.lineTo(97, 64); x.moveTo(52, 3); x.lineTo(52, 64); x.stroke();
+      x.globalAlpha /= .55 / .8; [[8, 8], [92, 8], [8, 92], [92, 92]].forEach(([p, q]) => x.fillRect(p - 1.5, q - 1.5, 3, 3));
+    } else if (d.t === 'grille') {
+      for (let i = 0; i < 6; i++) for (let j = 0; j < 4; j++) x.fillRect(6 + i * 16, 8 + j * 24, 7, 9);
+    } else if (d.t === 'plus') {                                            // registration crosses
+      x.lineWidth = 3; x.beginPath(); [[15, 18], [85, 18], [50, 82]].forEach(([p, q]) => { x.moveTo(p - 7, q); x.lineTo(p + 7, q); x.moveTo(p, q - 9); x.lineTo(p, q + 9); }); x.stroke();
+    } else if (d.t === 'door') {                                            // a recessed hatch: a dark inset with a lit frame
+      x.globalAlpha *= .9; x.fillRect(12, 10, 76, 80); x.globalAlpha /= .9; x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(12, 10, 76, 12); x.strokeStyle = '#ffffff'; x.globalAlpha *= .6; x.lineWidth = 2; x.strokeRect(12, 10, 76, 80);
+    } else if (d.t === 'tags') {                                            // a row of small stencilled words
+      x.font = '700 30px ' + MONO; x.textBaseline = 'middle'; x.textAlign = 'center';
+      const n = Math.max(1, Math.round(100 / (String(d.s).length * 22) * 1.6));
+      for (let i = 0; i < n; i++) { x.save(); x.translate((i + .5) * 100 / n, 50); x.scale(100 / n / (String(d.s).length * 22), 1.4); x.fillText(d.s, 0, 0); x.restore(); }
     } else if (d.t === 'logo') {
       x.scale(100 / 40, 100 / 40); x.fillStyle = C.acc; x.fill(LOGO_SQ);
       x.translate(6, 13); x.scale(1.75, 1.75); x.fillStyle = C.ground; x.fill(LOGO_EYE_T); x.fill(LOGO_EYE_B);
@@ -3127,27 +3319,38 @@ const run = (() => {
     x.restore();
   }
   const LOGO_SQ = new Path2D('M9 1h30v30l-8 8H1V9z'), LOGO_EYE_T = new Path2D('M0 4A10 10 0 0 1 16 4V4.05H10V2H6V4.05H0z'), LOGO_EYE_B = new Path2D('M16 4A10 10 0 0 1 0 4V3.95H6V6H10V3.95H16z');
-  function drawFaces(list, dist) {                                          // painter's order, back to front
-    const Q = [];
-    list.forEach(F => {
-      if (dot(F.n, sub(cam.E, F.pts[0])) <= 0) return;                     // facing away
-      const C3 = clipPoly(F.pts.map(toC));
-      if (C3.length < 3) return;
-      const z = (toC(F.pts[0])[2] + toC(F.pts[2])[2]) / 2;
-      if (z > dist) return;
-      Q.push([z, C3, F]);
+  function drawParts(objs, dist) {                                          // painter's order over all visible faces and lines
+    const Q = [], G = rgb(C.ground), Lc = toC(add(cam.E, Lgt));
+    objs.forEach(o => {
+      const c = toC(o.c);
+      if (c[2] < -o.r || c[2] - o.r > dist) return;
+      if (Math.abs(c[0]) - o.r > c[2] * W / cam.F * .6 + 2 && c[2] > 0) return;   // well off to the side of the view
+      const tiny = o.r * cam.F / Math.max(1, c[2]) < 2.5;
+      if (tiny) return;
+      o.F.forEach(F => {
+        if (dot(F.n, sub(cam.E, F.pts[0])) <= 0) return;
+        const C3 = clipPoly(F.pts.map(toC)); if (C3.length < 3) return;
+        let z = 0; C3.forEach(p => { z += p[2]; }); z /= C3.length;
+        Q.push([z - (F.plate ? .05 : 0), C3, F]);
+      });
+      o.L.forEach(l => { const r = seg3(l.pts[0], l.pts[1]); if (r) Q.push([r[2], null, l, r]); });
     });
-    Q.sort((a, b) => b[0] - a[0]).forEach(([z, C3, F]) => {
-      const [fill, fa, edge, ea] = ST[F.st], fog = 1 - sm(dist * .55, dist, z), shade = F.n[1] > .5 ? 1 : Math.abs(F.n[0]) > .5 ? .86 : .72;
+    Q.sort((a, b) => b[0] - a[0]).forEach(([z, C3, F, r]) => {
+      const fog = sm(dist * .35, dist, z) * .85;
+      if (!C3) { x.globalAlpha = 1 - fog; x.strokeStyle = F.col; x.lineWidth = Math.max(.7, Math.min(2, 30 / z)); x.beginPath(); x.moveTo(r[0][0], r[0][1]); x.lineTo(r[1][0], r[1][1]); x.stroke(); return; }
       const S2 = C3.map(scr);
       x.beginPath(); S2.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.closePath();
-      if (fill) { x.globalAlpha = fa * shade * fog; x.fillStyle = col(fill); x.fill(); }
-      x.globalAlpha = ea * fog; x.strokeStyle = col(edge); x.lineWidth = 1; x.stroke();
-      if (F.dec.length && fog > .05 && z < dist * .6) {
+      if (F.col) {
+        const base = rgb(F.col), l = .5 + .5 * Math.max(0, dot(F.n, Lgt)) + (F.n[1] > .6 ? .08 : 0), sh = base.map((v, i) => Math.round(mix(v * Math.min(1.08, l), G[i], fog)));
+        const cs = 'rgb(' + sh[0] + ',' + sh[1] + ',' + sh[2] + ')';
+        x.globalAlpha = 1; x.fillStyle = cs; x.fill(); x.strokeStyle = cs; x.lineWidth = .8; x.stroke();   // stroke in the same colour closes the seams
+        if (F.cap) { x.globalAlpha = .18 * (1 - fog); x.strokeStyle = '#000'; x.stroke(); }
+      }
+      if (F.dec && fog < .7 && z < dist * .7) {
         const P = F.pts.map(pj);
         if (P.every(Boolean)) {
           const U = [P[2][0] - P[3][0], P[2][1] - P[3][1]], V = [P[0][0] - P[3][0], P[0][1] - P[3][1]];
-          x.globalAlpha = fog; F.dec.forEach(d => decal(d, P[3], U, V));
+          x.globalAlpha = 1 - fog / .7; F.dec.forEach(d => decal(d, P[3], U, V));
         }
       }
     });
@@ -3230,7 +3433,7 @@ const run = (() => {
     const S = STOP[k], el = panels[k], ew = el.offsetWidth, eh = el.offsetHeight, ph = PW * eh / Math.max(1, ew);
     const r = unit(cross([0, 1, 0], mul(S.n, -1))), hw = mul(r, PW / 2), hh = [0, ph / 2, 0];
     const Wc = [add(sub(S.c, hw), hh), add(add(S.c, hw), hh), sub(add(S.c, hw), hh), sub(sub(S.c, hw), hh)], P = Wc.map(pj);
-    const vis = a > .01 && P.every(p => p && p[2] < 70) && dot(S.n, sub(cam.E, S.c)) > 0;
+    const vis = a > .01 && P.every(p => p && p[2] < 90) && dot(S.n, sub(cam.E, S.c)) > 0;
     if (!vis) { el.style.opacity = '0'; el.style.visibility = 'hidden'; return; }
     /* the pane itself: a faint fill, a lit frame and corner marks */
     x.globalAlpha = a * .5; x.fillStyle = C.ground; x.beginPath(); P.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.closePath(); x.fill();
@@ -3273,10 +3476,10 @@ const run = (() => {
     x.setTransform(dpr, 0, 0, dpr, 0, 0); x.globalAlpha = 1; x.fillStyle = C.ground; x.fillRect(0, 0, W, H);
     const dist = tNow < 1 ? 260 : 150, time = now / 1000;
     sky(dist); road(tNow, time);
-    const faces = [];
-    BLD.forEach(b => b.parts.forEach(p => faces.push(...p.F)));
-    FILL.forEach(b => { const c = toC(b.parts[0].c); if (c[2] > -10 && c[2] < dist) b.parts.forEach(p => faces.push(...p.F)); });
-    drawFaces(faces, dist);
+    const objs = [];
+    BLD.forEach(b => objs.push(...b.parts));
+    FILL.forEach(b => { const c = toC(b.c); if (c[2] > -14 && c[2] < dist + 10) objs.push(...b.parts); });
+    drawParts(objs, dist);
     extras(time);
     let best = -1, bw = 0;
     STOP.forEach((S, k) => { const a = pull(k, tNow); glass(k, sm(.05, .6, a)); if (a > bw) { bw = a; best = k; } });
@@ -3300,7 +3503,6 @@ const run = (() => {
     if (onScreen && current === 'about' && !document.hidden) raf = requestAnimationFrame(frame);
   }
   function kick() { if (!raf && onScreen) { last = performance.now(); raf = requestAnimationFrame(frame); } }
-  const TAU = 6.2832;
   function warpTo(k) {                                                      // fly to stop k: an eased scroll with speed lines
     const goal = sec.getBoundingClientRect().top + scrollY - hdr.getBoundingClientRect().bottom + (TK[k] / T) * span(), from = scrollY;
     if (still.matches) { scrollTo({ top: goal, behavior: 'instant' }); return; }
