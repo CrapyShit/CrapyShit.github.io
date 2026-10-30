@@ -368,6 +368,7 @@ a.gtile:hover b{text-decoration:underline;text-decoration-color:var(--accent);te
 .run-p h3{font-size:2.1rem;line-height:.95}
 .run-p .run-r{color:var(--accent)}
 .run-p .run-g{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.run-sp{position:absolute;left:0;top:0;opacity:0;pointer-events:none;white-space:nowrap;color:var(--ink);letter-spacing:.08em}
 .run-hud{position:absolute;left:var(--pad);top:1rem;display:grid;gap:.15rem;pointer-events:none}
 .run-hud b{font-weight:500}
 .run-tl{position:absolute;left:var(--pad);right:calc(var(--pad) + 9.5rem);bottom:1rem;display:flex;flex-wrap:wrap;gap:.4rem}
@@ -615,16 +616,16 @@ body[data-view="page"] .lore--bg{display:none}
           <div class="grp">
             <h2 class="label" data-i18n="ab.exp">Experience</h2>
             <ul class="tl">
-              <li data-run="3" tabindex="0" role="button"><span class="label">2023.09 – 2025.07</span><b>Miraculous Corp</b><span data-i18n="ab.gen">3D generalist</span></li>
+              <li data-run="1" tabindex="0" role="button"><span class="label">2023.09 – 2025.07</span><b>Miraculous Corp</b><span data-i18n="ab.gen">3D generalist</span></li>
               <li data-run="2" tabindex="0" role="button"><span class="label">2023.01 – 2023.06</span><b>Zag Studios</b><span data-i18n="ab.gen">3D generalist</span></li>
-              <li data-run="1" tabindex="0" role="button"><span class="label">2022.01 – 2022.06</span><b>Mathematic Studio</b><span data-i18n="ab.gen">3D generalist</span></li>
+              <li data-run="3" tabindex="0" role="button"><span class="label">2022.01 – 2022.06</span><b>Mathematic Studio</b><span data-i18n="ab.gen">3D generalist</span></li>
             </ul>
           </div>
           <div class="grp">
             <h2 class="label" data-i18n="ab.edu">Education</h2>
             <ul class="tl">
-              <li data-run="4" tabindex="0" role="button"><span class="label">2025.10 –</span><b data-i18n="ab.tut">Tokyo University of Technology, School of Media Science</b><span data-i18n="ab.rs">Research student</span></li>
-              <li data-run="0" tabindex="0" role="button"><span class="label">2020.09 – 2025.06</span><b data-i18n="ab.isart">Isart Digital, Paris</b><span data-i18n="ab.ms">Master's, 3D cinema</span></li>
+              <li data-run="0" tabindex="0" role="button"><span class="label">2025.10 –</span><b data-i18n="ab.tut">Tokyo University of Technology, School of Media Science</b><span data-i18n="ab.rs">Research student</span></li>
+              <li data-run="4" tabindex="0" role="button"><span class="label">2020.09 – 2025.06</span><b data-i18n="ab.isart">Isart Digital, Paris</b><span data-i18n="ab.ms">Master's, 3D cinema</span></li>
             </ul>
           </div>
         </section>
@@ -640,13 +641,14 @@ body[data-view="page"] .lore--bg{display:none}
       <section class="run" id="run" aria-labelledby="run-t">
         <div class="run-st" id="run-st">
           <canvas id="run-cv" aria-hidden="true"></canvas>
-        <article class="run-p" tabindex="-1"><p class="label">2020.09 – 2025.06 · 01</p><h3 class="disp" data-i18n="ab.isart">Isart Digital, Paris</h3><p class="run-r label" data-i18n="ab.ms2">Master's, 3D cinema</p><p data-i18n="run.b0"></p><p class="run-g">Maya · Creature rig</p></article>
-        <article class="run-p" tabindex="-1"><p class="label">2022.01 – 2022.06 · 02</p><h3 class="disp">Mathematic Studio</h3><p class="run-r label" data-i18n="ab.gen">3D generalist</p><p data-i18n="run.b1"></p></article>
+        <article class="run-p" tabindex="-1"><p class="label">2025.10 – · 01</p><h3 class="disp" data-i18n="ab.tut2">Tokyo University of Technology</h3><p class="run-r label" data-i18n="ab.rs">Research student</p><p data-i18n="run.b4"></p><p class="run-g">Python · Unreal Engine 5.6 · Control Rig</p></article>
+        <article class="run-p" tabindex="-1"><p class="label">2023.09 – 2025.07 · 02</p><h3 class="disp">Miraculous Corp</h3><p class="run-r label" data-i18n="ab.gen">3D generalist</p><p data-i18n="run.b3"></p><p class="run-g">Maya 2024 · Unreal Engine 5.4 · Rigging</p></article>
         <article class="run-p" tabindex="-1"><p class="label">2023.01 – 2023.06 · 03</p><h3 class="disp">Zag Studios</h3><p class="run-r label" data-i18n="ab.gen">3D generalist</p><p data-i18n="run.b2"></p></article>
-        <article class="run-p" tabindex="-1"><p class="label">2023.09 – 2025.07 · 04</p><h3 class="disp">Miraculous Corp</h3><p class="run-r label" data-i18n="ab.gen">3D generalist</p><p data-i18n="run.b3"></p><p class="run-g">Maya 2024 · Unreal Engine 5.4 · Rigging</p></article>
-        <article class="run-p" tabindex="-1"><p class="label">2025.10 – · 05</p><h3 class="disp" data-i18n="ab.tut2">Tokyo University of Technology</h3><p class="run-r label" data-i18n="ab.rs">Research student</p><p data-i18n="run.b4"></p><p class="run-g">Python · Unreal Engine 5.6 · Control Rig</p></article>
+        <article class="run-p" tabindex="-1"><p class="label">2022.01 – 2022.06 · 04</p><h3 class="disp">Mathematic Studio</h3><p class="run-r label" data-i18n="ab.gen">3D generalist</p><p data-i18n="run.b1"></p></article>
+        <article class="run-p" tabindex="-1"><p class="label">2020.09 – 2025.06 · 05</p><h3 class="disp" data-i18n="ab.isart">Isart Digital, Paris</h3><p class="run-r label" data-i18n="ab.ms2">Master's, 3D cinema</p><p data-i18n="run.b0"></p><p class="run-g">Maya · Creature rig</p></article>
+          <p class="run-sp label" id="run-sp" data-i18n="run.sp">The spark</p>
           <div class="run-hud"><span class="label"><span data-i18n="run.k">The path</span> <span id="run-n">—</span></span><b id="run-t" data-i18n="run.hint">Scroll to follow the path</b></div>
-          <nav class="run-tl" id="run-tl" aria-label="Path stops"><button type="button" data-run="0">2020 Isart</button><button type="button" data-run="1">2022 Mathematic</button><button type="button" data-run="2">2023 Zag</button><button type="button" data-run="3">2023 Miraculous</button><button type="button" data-run="4">2025 TUT</button></nav>
+          <nav class="run-tl" id="run-tl" aria-label="Path stops"><button type="button" data-run="0">2025 TUT</button><button type="button" data-run="1">2023 Miraculous</button><button type="button" data-run="2">2023 Zag</button><button type="button" data-run="3">2022 Mathematic</button><button type="button" data-run="4">2020 Isart</button><button type="button" data-run="5">✦</button></nav>
         </div>
       </section>
     </main>
@@ -798,7 +800,7 @@ const T = {
     'ab.cv': 'CV, PDF', 'ab.exp': 'Experience', 'ab.edu': 'Education', 'ab.soft': 'Software', 'ab.lang': 'Languages', 'ab.also': 'Outside work',
     'ab.gen': '3D generalist', 'ab.tut': 'Tokyo University of Technology, School of Media Science', 'ab.rs': 'Research student',
     'ab.isart': 'Isart Digital, Paris', 'ab.ms': "Master's, 3D cinema. RNCP level 7: expert in digital design, CGI animation and VFX",
-    'run.k': 'The path', 'run.hint': 'Scroll to follow the path', 'ab.ms2': "Master's, 3D cinema", 'ab.tut2': 'Tokyo University of Technology',
+    'run.k': 'The path', 'run.hint': 'Scroll to follow the path', 'run.sp': 'The spark: where it started', 'ab.ms2': "Master's, 3D cinema", 'ab.tut2': 'Tokyo University of Technology',
     'run.b0': "Five years of 3D cinema in Paris, ending with a master's (RNCP level 7). My master's project, a creature rig, is still the centre of my portfolio.",
     'run.b1': 'Six months as a 3D generalist: my first studio work, during my years at Isart.',
     'run.b2': 'Six months as a 3D generalist on production at Zag Studios.',
@@ -842,7 +844,7 @@ const T = {
     'ab.cv': '履歴書（PDF）', 'ab.exp': '職歴', 'ab.edu': '学歴', 'ab.soft': '使用ソフト', 'ab.lang': '言語', 'ab.also': '趣味',
     'ab.gen': '3Dジェネラリスト', 'ab.tut': '東京工科大学 メディア学部', 'ab.rs': '研究生',
     'ab.isart': 'Isart Digital Paris', 'ab.ms': '3Dシネマ専攻 修士課程。RNCPレベル7：デジタルデザイン、CGIアニメーション、VFXのエキスパート',
-    'run.k': '軌跡', 'run.hint': 'スクロールで軌跡をたどる', 'ab.ms2': '3Dシネマ専攻 修士課程', 'ab.tut2': '東京工科大学',
+    'run.k': '軌跡', 'run.hint': 'スクロールで軌跡をたどる', 'run.sp': '原点の光：すべての始まり', 'ab.ms2': '3Dシネマ専攻 修士課程', 'ab.tut2': '東京工科大学',
     'run.b0': 'パリで5年間3Dシネマを学び、修士号（RNCPレベル7）を取得。修士制作のクリーチャーリグは、今もポートフォリオの中心です。',
     'run.b1': '3Dジェネラリストとして6か月間。Isart在学中に経験した、最初のスタジオでの仕事です。',
     'run.b2': '3Dジェネラリストとして6か月間、Zag Studiosで制作に参加しました。',
@@ -2988,7 +2990,10 @@ const run = (() => {
 
   /* ----- the road: x(z) wanders left and right ----- */
   const xs = z => 7 * Math.sin(z * .045) + 3.2 * Math.sin(z * .11 + 1);
-  const ROAD = 1.9, Z0 = 34, DZ = 46, ZS = Array.from({ length: N }, (_, k) => Z0 + k * DZ), ZEND = ZS[N - 1] + 40;
+  const ROAD = 1.9, Z0 = 34, DZ = 46, ZS = Array.from({ length: N }, (_, k) => Z0 + k * DZ), ZSP = ZS[N - 1] + 46, ZEND = ZSP + 24;
+  /* newest first: the stops run back in time, and the road ends at the spark */
+  const ORDER = ['tut', 'mc', 'zag', 'mth', 'isd'], CODES = { tut: 'TUT-25', mc: 'MC-23', zag: 'ZAG-23', mth: 'MTH-22', isd: 'ARK-20' };
+  const SPARK = [xs(ZSP), 1.7, ZSP];
   const SIDE = ZS.map((z, k) => (k % 2 ? -1 : 1));
   /* each stop: the panel (centre, facing the road and the camera coming in), where the camera parks to read it, and the building */
   const STOP = ZS.map((z, k) => {
@@ -3094,7 +3099,8 @@ const run = (() => {
     const S = STOP[k], fr = -S.s, P = [], add2 = q => { P.push(q); return q; }, code = S.code;
     setFrame(S.b[0], S.b[2], fr);
     let mast = [0, 10, 0, 4], tags = [[4, 4, -4], [-2, 9, 3]];
-    if (k === 0) {                                                          // the ARK basin: a ring pool with a capsule column and a boom
+    const id = ORDER[k];
+    if (id === 'isd') {                                                          // the ARK basin: a ring pool with a capsule column and a boom
       add2(rbox([-.5, 0, 0], 'y', 1.7, 11, 12.5, 2.2, .3, PAL.white, { seg: 3 }));
       add2(tank([-.8, 1.55, 0], 'y', .12, 4, PAL.pool, false, 28));
       add2(torus([-.8, 1.75, 0], 4.25, .42, PAL.white));
@@ -3113,7 +3119,7 @@ const run = (() => {
       add2(plate([5.23, .95, 3.6], FRONT, 1.2, 1.2, [{ t: 'logo' }]));
       add2(plate([-.05, 3, 0], FRONT, .9, 1.4, [{ t: 'pix', s: '0' + (k + 1), col: PAL.black }]));
       mast = [-.8, 7.1, 0, 2.5]; tags = [[3.4, 3.4, 3.6], [-.8, 8.6, 0]];
-    } else if (k === 1) {                                                   // a crate wall: white crates with blue lids in a blue frame, a few pulled out
+    } else if (id === 'mth') {                                                   // a crate wall: white crates with blue lids in a blue frame, a few pulled out
       const cw = 2.6, ch = 1.9;
       for (let iz = 0; iz < 5; iz++) for (let iy = 0; iy < 3; iy++) {
         if ((iz === 2 && iy === 0) || (iz === 3 && iy === 1)) {             // gaps, with the yellow cargo inside
@@ -3134,7 +3140,7 @@ const run = (() => {
       add2(plate([1.42, 7.6, -1], FRONT, 4.4, 1.1, [{ t: 'pix', s: code, col: PAL.blue }]));
       add2(plate([1.42, 7.6, 3.4], FRONT, 1.1, 1.1, [{ t: 'stripes', col: PAL.blue }]));
       mast = [-.4, 7.3, -5, 3]; tags = [[4.4, 2.6, 1.8], [1.5, 7.9, 5]];
-    } else if (k === 2) {                                                   // a locker bar: a long rounded shell with a padded top, doors and a hose
+    } else if (id === 'zag') {                                                   // a locker bar: a long rounded shell with a padded top, doors and a hose
       add2(rbox([0, .45, -7], 'z', 14, 3, .9, .2, 0, PAL.black, { seg: 1 }));
       add2(rbox([0, 2.6, -6.8], 'z', 13.6, 3.6, 3.4, 1.1, .35, PAL.white, { seg: 3 }));
       add2(rbox([-.2, 4.65, -6.4], 'z', 12.8, 2.9, .75, .35, .2, PAL.navy, { seg: 2 }));
@@ -3149,7 +3155,7 @@ const run = (() => {
       add2(plate([-1.88, 6.5, 2.5], FRONT, 2.4, 2, [{ t: 'logo' }]));
       add2(plate([-1.88, 3.6, 2.5], FRONT, 2.4, 1.2, [{ t: 'pix', s: '0' + (k + 1), col: PAL.black }]));
       mast = [-3.6, 9.4, 2.5, 3]; tags = [[1, 5.4, -1], [-3.6, 10.5, 5]];
-    } else if (k === 3) {                                                   // a tank unit: a white capsule on a black base, end blocks, an orange camera and a hose
+    } else if (id === 'mc') {                                                   // a tank unit: a white capsule on a black base, end blocks, an orange camera and a hose
       add2(rbox([0, .65, -6.4], 'z', 12.8, 3.2, 1.3, .35, .1, PAL.black, { seg: 2 }));
       add2(tank([0, 3.4, -5.2], 'z', 9.8, 2.05, PAL.white, true, 22));
       add2(rbox([0, 0, -7.4], 'y', 5.2, 3.6, 2.6, .35, .15, PAL.black, { seg: 2 }));
@@ -3184,12 +3190,18 @@ const run = (() => {
     }
     return { parts: P, mast: [...XF(mast.slice(0, 3)), mast[3]], tags: tags.map((p, i) => ({ p: XF(p), s: ['72', '107', '42', '15pH', '82', '66-7k', '90', '23', '5', '33R'][(k * 2 + i) % 10] })) };
   }
-  STOP.forEach((S, k) => { S.code = ['ARK-20', 'MTH-22', 'ZAG-23', 'MC-23', 'TUT-25'][k] || 'S-' + k; });
+  STOP.forEach((S, k) => { S.code = CODES[ORDER[k]] || 'S-' + k; });
   const BLD = STOP.map((S, k) => building(k));
+  BLD.forEach((b, k) => { let gi = 0; b.parts.forEach(p => p.F.forEach(f => { f.g = null; f.k = k; f.gi = gi++ >> 3; })); });
+  BLD.forEach((b, k) => {                                                   // each building's centre and reach, for framing it
+    let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+    b.parts.forEach(p => p.F.forEach(f => f.pts.forEach(q => { lo = lo.map((v, i) => Math.min(v, q[i])); hi = hi.map((v, i) => Math.max(v, q[i])); })));
+    STOP[k].Tb = mul(add(lo, hi), .5); STOP[k].ext = sub(hi, lo);
+  });
   /* the rest of the district: a kit of props either side (crate stacks, containers, small tanks, towers), lighter on detail */
   const FILL = [], KITC = [PAL.white, PAL.white, PAL.bone, PAL.black, PAL.blue, PAL.lime, PAL.orange];
   for (let z = -10; z < ZEND + 30; z += 8 + rnd() * 5) [-1, 1].forEach(s => {
-    if (STOP.some(S => S.s === s && Math.abs(S.z + 5 - z) < 14)) return;
+    if (STOP.some(S => S.s === s && z > S.z - 32 && z < S.z + 20) || Math.abs(ZSP - z) < 14) return;   // keep the parked views and the spark clear
     const bx = xs(z) + s * (10 + rnd() * 7), P = [], c0 = KITC[rnd() * KITC.length | 0], kind = rnd();
     setFrame(bx, z, -s);
     if (kind < .3) {                                                        // a crate stack
@@ -3237,11 +3249,25 @@ const run = (() => {
     return [scr(A), scr(Bc), (A[2] + Bc[2]) / 2];
   }
 
-  /* ----- timeline: scroll units t (0 .. T); the camera's distance along the road and how far it has pulled off to a stop ----- */
-  const TK = STOP.map((S, k) => 1.4 + k * 2.1), T = TK[N - 1] + 1.6;
-  const UK = [[0, -6], [1, 4]];
-  STOP.forEach((S, k) => { UK.push([TK[k] - .5, S.z - 13], [TK[k] + .5, S.z - 9.5]); });
-  UK.push([T, ZEND - 10]);
+  /* ----- timeline: scroll units t (0 .. T). The camera runs along the road (u), and near each stop it blends to a parked view
+     that frames the building in two thirds of the screen, the panel taking the last third. The road keys bracket each parked
+     view (behind it on the way in, past it on the way out), so the camera only ever moves forward. ----- */
+  const TK = STOP.map((S, k) => 1.4 + k * 2.1), TSP = TK[N - 1] + 2.3, T = TSP + .25;
+  const narrow = () => W < 760 || W < H;
+  function parked(k) {                                                      // where the camera parks for stop k, and where it looks
+    const S = STOP[k], s = S.s, dir = unit([s * .6, -.2, .78]), nar = narrow(), F = H * .95;
+    const hz = Math.max(S.ext[0], S.ext[2]) * .5, vt = S.ext[1] * .5;          // fit the width into two thirds and the height into the frame
+    const D = Math.max(12, nar ? Math.max(hz * F / (W * .4), vt * F / (H * .22)) : Math.max(hz * F / (W / 3.6), vt * F / (H * .3))) * 1.15 + hz * 1.1;
+    const E = sub(S.Tb, mul(dir, D)), r = unit(cross([0, 1, 0], dir)), u = cross(dir, r);
+    const Tg = nar ? sub(S.Tb, mul(u, H * .2 * D / F)) : sub(S.Tb, mul(r, s * (W / 6) * D / F));
+    return [E, Tg];
+  }
+  let UK = [];
+  function keys() {
+    UK = [[0, -6], [1, 4]];
+    STOP.forEach((S, k) => { const z = parked(k)[0][2]; UK.push([TK[k] - .5, z - 4], [TK[k] + .5, z + 3]); });
+    UK.push([TSP - .7, ZSP - 16], [TSP, ZSP - 6.5], [T, ZSP - 6]);
+  }
   function ukey(t) {                                                        // monotone cubic through UK
     const K = UK, n = K.length - 1;
     if (t <= K[0][0]) return K[0][1];
@@ -3252,11 +3278,12 @@ const run = (() => {
     return (2 * u3 - 3 * u2 + 1) * K[i][1] + (u3 - 2 * u2 + u) * h * tg(i) + (3 * u2 - 2 * u3) * K[i + 1][1] + (u3 - u2) * h * tg(i + 1);
   }
   const pull = (k, t) => sm(TK[k] - .8, TK[k] - .3, t) * (1 - sm(TK[k] + .3, TK[k] + .8, t));
+  const sparkW = t => sm(TSP - 1, TSP - .15, t);
   function camAt(t) {
     const u = ukey(t), E0 = [xs(u) - (xs(u + 12) - xs(u)) * .25, 2.6, u], T0 = [xs(u + 14), 1.1, u + 14];
     let E = E0, Tg = T0;
-    const D = Math.max(10.5, .95 * H * PW / (.62 * Math.max(1, W)));       // far enough back to take in the pane and the building behind it
-    STOP.forEach((S, k) => { const w = eio(pull(k, t)); if (w > 0) { E = mixV(E, add(S.c, add(mul(S.n, D), [0, 1.3, 0])), w); Tg = mixV(Tg, mixV(S.c, [S.b[0], 4.5, S.b[2]], .32), w); } });
+    STOP.forEach((S, k) => { const w = eio(pull(k, t)); if (w > 0) { const [Ep, Tp] = parked(k); E = mixV(E, Ep, w); Tg = mixV(Tg, Tp, w); } });
+    const sw = eio(sparkW(t)); if (sw > 0) { E = mixV(E, [SPARK[0] - .4, 2.3, ZSP - 6], sw); Tg = mixV(Tg, SPARK, sw); }
     const o = 1 - eio(sm(0, 1.05, t));                                      // the start: a high, tilted map of the whole road
     if (o > 0) { const mid = ZEND * .42; E = mixV(E, [xs(mid) + 52, 74, mid - 70], o); Tg = mixV(Tg, [xs(mid), 0, mid + 6], o); }
     return look(E, Tg);
@@ -3320,6 +3347,7 @@ const run = (() => {
   }
   const LOGO_SQ = new Path2D('M9 1h30v30l-8 8H1V9z'), LOGO_EYE_T = new Path2D('M0 4A10 10 0 0 1 16 4V4.05H10V2H6V4.05H0z'), LOGO_EYE_B = new Path2D('M16 4A10 10 0 0 1 0 4V3.95H6V6H10V3.95H16z');
   function drawParts(objs, dist) {                                          // painter's order over all visible faces and lines
+    PAT = null;
     const Q = [], G = rgb(C.ground), Lc = toC(add(cam.E, Lgt));
     objs.forEach(o => {
       const c = toC(o.c);
@@ -3340,12 +3368,16 @@ const run = (() => {
       if (!C3) { x.globalAlpha = 1 - fog; x.strokeStyle = F.col; x.lineWidth = Math.max(.7, Math.min(2, 30 / z)); x.beginPath(); x.moveTo(r[0][0], r[0][1]); x.lineTo(r[1][0], r[1][1]); x.stroke(); return; }
       const S2 = C3.map(scr);
       x.beginPath(); S2.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.closePath();
-      if (F.col) {
+      const wire = F.g != null && F.g === glitchObj && hsh(F.gi, glitchObj) < .5;   // a building in a glitch burst drops to wireframe in places
+      if (F.col && !wire) {
         const base = rgb(F.col), l = .5 + .5 * Math.max(0, dot(F.n, Lgt)) + (F.n[1] > .6 ? .08 : 0), sh = base.map((v, i) => Math.round(mix(v * Math.min(1.08, l), G[i], fog)));
         const cs = 'rgb(' + sh[0] + ',' + sh[1] + ',' + sh[2] + ')';
-        x.globalAlpha = 1; x.fillStyle = cs; x.fill(); x.strokeStyle = cs; x.lineWidth = .8; x.stroke();   // stroke in the same colour closes the seams
+        x.globalAlpha = F.edge ? .85 : 1; x.fillStyle = cs; x.fill(); x.strokeStyle = cs; x.lineWidth = .8; if (!F.edge) x.stroke();   // stroke in the same colour closes the seams
+        if (!F.plate && z < 60) { x.globalAlpha = .3 * (1 - fog); x.fillStyle = pat(); x.fill(); }   // the pixel grid: a digitised surface
         if (F.cap) { x.globalAlpha = .18 * (1 - fog); x.strokeStyle = '#000'; x.stroke(); }
+        if (!F.edge) { x.globalAlpha = .07 * (1 - fog); x.strokeStyle = C.glB; x.lineWidth = .6; x.stroke(); }
       }
+      if (F.edge || wire) { x.globalAlpha = (F.ea || .9) * (1 - fog); x.strokeStyle = wire ? (hsh(F.gi, 3) < .5 ? C.glA : C.glB) : C[F.edge] || F.edge; x.lineWidth = 1.1; x.stroke(); }
       if (F.dec && fog < .7 && z < dist * .7) {
         const P = F.pts.map(pj);
         if (P.every(Boolean)) {
@@ -3374,10 +3406,11 @@ const run = (() => {
       const off = (j / (lanes - 1) - .5) * 2 * ROAD, edge = j === 0 || j === lanes - 1;
       x.fillStyle = edge ? C.acc : j % 3 ? C.glB : C.acc;
       for (let z = Math.ceil(z0 / dz) * dz; z < z1; z += dz) {
-        const tx = (xs(z + .5) - xs(z - .5)), nl = Math.hypot(tx, 1), p = pj([xs(z) + off / nl, .02, z - off * tx / nl]);
+        if (z > ZSP + .5) break;
+        const nf = 1 - .97 * sm(ZSP - 34, ZSP, z), tx = (xs(z + .5) - xs(z - .5)), nl = Math.hypot(tx, 1), p = pj([xs(z) + off * nf / nl, .02 + .9 * sm(ZSP - 10, ZSP, z), z - off * nf * tx / nl]);
         if (!p) continue;
         const fl = (z * .35 - motion * 2.2 + j * .37) % 1, pulse = Math.pow((fl + 1) % 1, 6), d = p[2];
-        const a = (edge ? .9 : .32 + .6 * pulse) * (1 - sm(50, 150, d)) * (z > ZEND ? 1 - sm(ZEND, ZEND + 18, z) : 1);
+        const a = (edge ? .9 : .32 + .6 * pulse) * (1 - sm(50, 150, d));
         if (a < .02) continue;
         const sz = Math.max(1, Math.min(5, (edge ? 2.4 : 1.6) * 30 / d));
         x.globalAlpha = a; x.fillRect(p[0] - sz / 2, p[1] - sz / 2, sz, sz);
@@ -3390,7 +3423,7 @@ const run = (() => {
       const a = 1 - sm(70, 160, P[0][2]);
       x.globalAlpha = a; x.strokeStyle = C.acc; x.lineWidth = Math.max(1, Math.min(4, 40 / P[0][2]));
       x.beginPath(); x.moveTo(P[0][0], P[0][1]); x.lineTo(P[1][0], P[1][1]); x.lineTo(P[2][0], P[2][1]); x.lineTo(P[3][0], P[3][1]); x.stroke();
-      const m = pj([cx, h + .6, z]); if (m) { x.fillStyle = C.ink; x.font = '600 ' + Math.max(9, Math.min(28, 260 / m[2])) + 'px ' + MONO; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('0' + (k + 1) + ' / ' + STOP[k].code, m[0], m[1]); }
+      const m = pj([cx, h + .6, z]); if (m) { x.globalAlpha = a * (1 - pull(k, t)); x.fillStyle = C.ink; x.font = '600 ' + Math.max(9, Math.min(28, 260 / m[2])) + 'px ' + MONO; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('0' + (k + 1) + ' / ' + STOP[k].code, m[0], m[1]); }
     });
   }
   function sky(dist) {
@@ -3428,19 +3461,25 @@ const run = (() => {
       });
     });
   }
-  /* the glass panels: a pane in the scene, and its HTML text laid onto it with a perspective transform */
-  function glass(k, a) {
-    const S = STOP[k], el = panels[k], ew = el.offsetWidth, eh = el.offsetHeight, ph = PW * eh / Math.max(1, ew);
-    const r = unit(cross([0, 1, 0], mul(S.n, -1))), hw = mul(r, PW / 2), hh = [0, ph / 2, 0];
-    const Wc = [add(sub(S.c, hw), hh), add(add(S.c, hw), hh), sub(add(S.c, hw), hh), sub(sub(S.c, hw), hh)], P = Wc.map(pj);
-    const vis = a > .01 && P.every(p => p && p[2] < 90) && dot(S.n, sub(cam.E, S.c)) > 0;
-    if (!vis) { el.style.opacity = '0'; el.style.visibility = 'hidden'; return; }
-    /* the pane itself: a faint fill, a lit frame and corner marks */
-    x.globalAlpha = a * .5; x.fillStyle = C.ground; x.beginPath(); P.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.closePath(); x.fill();
+  /* the panels float in front of the camera, in the third of the screen the building leaves free (the bottom on narrow screens),
+     turned a little toward the middle and bobbing; the HTML text is laid onto the pane with a perspective transform */
+  function glass(k, a, time) {
+    const S = STOP[k], el = panels[k];
+    if (a <= .01) { el.style.opacity = '0'; el.style.visibility = 'hidden'; return; }
+    const ew = el.offsetWidth, eh = el.offsetHeight, nar = narrow(), side = -S.s, Dp = 6, kk = Dp / cam.F, bob = still.matches ? 0 : Math.sin(time * 1.1 + k) * 5;
+    let sx2, sy2, th;
+    if (nar) { sx2 = W / 2; sy2 = H - eh / 2 - 58 + (1 - a) * 60; th = 0; }
+    else { sx2 = (side < 0 ? W * .045 + ew / 2 : W - W * .045 - ew / 2) + side * (1 - a) * W * .2; sy2 = H * .48 + bob; th = side * -.24 + (still.matches ? 0 : Math.sin(time * .7 + k) * .03); }
+    const Cw = add(add(add(cam.E, mul(cam.f, Dp)), mul(cam.r, (sx2 - cam.cx) * kk)), mul(cam.u, -(sy2 - cam.cy) * kk));
+    const rp = add(mul(cam.r, Math.cos(th)), mul(cam.f, Math.sin(th))), hw = mul(rp, ew * kk / 2), hh = mul(cam.u, eh * kk / 2);
+    const P = [add(sub(Cw, hw), hh), add(add(Cw, hw), hh), sub(add(Cw, hw), hh), sub(sub(Cw, hw), hh)].map(pj);
+    if (P.some(p => !p)) { el.style.visibility = 'hidden'; return; }
+    /* the pane: a faint fill, a lit frame, corner marks, and a leader line to the building */
+    x.globalAlpha = a * .42; x.fillStyle = C.ground; x.beginPath(); P.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.closePath(); x.fill();
     x.globalAlpha = a; x.strokeStyle = C.acc; x.lineWidth = 1.2; x.stroke();
-    const stand = [pj(add(sub(S.c, mul(hw, .7)), [0, -ph / 2, 0])), pj([S.c[0] - hw[0] * .7, 0, S.c[2] - hw[2] * .7]), pj(add(add(S.c, mul(hw, .7)), [0, -ph / 2, 0])), pj([S.c[0] + hw[0] * .7, 0, S.c[2] + hw[2] * .7])];
-    if (stand.every(Boolean)) { x.globalAlpha = a * .6; x.strokeStyle = C.ink2; x.beginPath(); x.moveTo(stand[0][0], stand[0][1]); x.lineTo(stand[1][0], stand[1][1]); x.moveTo(stand[2][0], stand[2][1]); x.lineTo(stand[3][0], stand[3][1]); x.stroke(); }
-    /* homography from the element's box to the projected quad, as a CSS matrix3d */
+    x.lineWidth = 2.4; x.beginPath(); P.forEach((p, i) => { const q = P[(i + 1) % 4], o = P[(i + 3) % 4]; x.moveTo(p[0] + (q[0] - p[0]) * .08, p[1] + (q[1] - p[1]) * .08); x.lineTo(p[0], p[1]); x.lineTo(p[0] + (o[0] - p[0]) * .08, p[1] + (o[1] - p[1]) * .08); }); x.stroke();
+    const tb = pj(S.Tb);
+    if (tb && !nar) { const e0 = side < 0 ? P[1] : P[0], e1 = side < 0 ? P[2] : P[3], m = [(e0[0] + e1[0]) / 2, (e0[1] + e1[1]) / 2]; x.globalAlpha = a * .55; x.strokeStyle = C.acc; x.lineWidth = 1; x.setLineDash([3, 4]); x.beginPath(); x.moveTo(m[0], m[1]); x.lineTo(tb[0], tb[1]); x.stroke(); x.setLineDash([]); x.fillStyle = C.acc; x.fillRect(tb[0] - 3, tb[1] - 3, 6, 6); }
     const [x0, y0] = P[0], [x1, y1] = P[1], [x2, y2] = P[2], [x3, y3] = P[3];
     const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3, den = dx1 * dy2 - dx2 * dy1;
     const g = (dx3 * dy2 - dx2 * dy3) / den, h = (dx1 * dy3 - dx3 * dy1) / den;
@@ -3448,14 +3487,90 @@ const run = (() => {
     el.style.transform = 'matrix3d(' + [A / ew, D / ew, 0, g / ew, Bq / eh, E / eh, 0, h / eh, 0, 0, 1, 0, Cq, Fq, 0, 1].map(v => +v.toFixed(6)).join(',') + ')';
     el.style.opacity = a.toFixed(3); el.style.visibility = 'visible';
   }
+  /* the spark: a small lit sphere where the road ends, with a halo, a slow ring of motes and pulses */
+  function spark(t, time) {
+    const p = pj(SPARK); if (!p) return;
+    const R = Math.max(1.2, .2 * cam.F / p[2]), pu = still.matches ? 0 : (Math.sin(time * 2.2) + 1) / 2, A0 = 1 - sm(120, 200, p[2]);
+    const g1 = x.createRadialGradient(p[0], p[1], 0, p[0], p[1], R * 7);
+    g1.addColorStop(0, C.acc); g1.addColorStop(.18, C.acc); g1.addColorStop(1, 'rgba(0,0,0,0)');
+    x.globalAlpha = A0 * (.35 + .15 * pu); x.fillStyle = g1; x.fillRect(p[0] - R * 7, p[1] - R * 7, R * 14, R * 14);
+    const g2 = x.createRadialGradient(p[0] - R * .35, p[1] - R * .35, R * .1, p[0], p[1], R);
+    g2.addColorStop(0, '#ffffff'); g2.addColorStop(.55, '#ffffff'); g2.addColorStop(1, C.acc);
+    x.globalAlpha = A0; x.fillStyle = g2; x.beginPath(); x.arc(p[0], p[1], R, 0, TAU); x.fill();
+    for (let i = 0; i < 3; i++) {                                           // pulses running out
+      const u = ((time * .45 + i / 3) % 1); x.globalAlpha = A0 * (1 - u) * .7; x.strokeStyle = C.acc; x.lineWidth = 1.2; x.beginPath(); x.arc(p[0], p[1], R * (1.6 + u * 10), 0, TAU); x.stroke();
+    }
+    for (let i = 0; i < 26; i++) {                                          // motes on a tilted ring
+      const an = i / 26 * TAU + time * .5, q = pj([SPARK[0] + Math.cos(an) * .9, SPARK[1] + Math.sin(an) * .3, SPARK[2] + Math.sin(an) * .9]);
+      if (!q) continue; const sz = Math.max(1, 3 * 6 / q[2]); x.globalAlpha = A0 * (.4 + .6 * ((i + (time * 6 | 0)) % 5 === 0)); x.fillStyle = i % 4 ? C.ink : C.acc; x.fillRect(q[0] - sz / 2, q[1] - sz / 2, sz, sz);
+    }
+    const cap = $('#run-sp'), sw = sparkW(t);
+    cap.style.opacity = (sw * A0).toFixed(3); cap.style.transform = 'translate(' + Math.round(p[0]) + 'px,' + Math.round(p[1] + R * 12 + 14) + 'px) translateX(-50%)';
+  }
   function minimap(t) {
-    const w = 132, h = 92, ox = W - w - 18, oy = H - h - 18, zA = -10, zB = ZEND + 4, X = z => ox + 8 + (z - zA) / (zB - zA) * (w - 16), Y = v => oy + h / 2 - v * 2.2;
+    const w = 132, h = 92, ox = W - w - 18, oy = H - h - 18, zA = -10, zB = ZSP + 6, X = z => ox + 8 + (z - zA) / (zB - zA) * (w - 16), Y = v => oy + h / 2 - v * 2.2;
     x.globalAlpha = .7; x.fillStyle = C.ground; x.fillRect(ox, oy, w, h); x.globalAlpha = 1; x.strokeStyle = C.line; x.lineWidth = 1; x.strokeRect(ox + .5, oy + .5, w, h);
     x.strokeStyle = C.ink2; x.beginPath(); for (let z = zA; z <= zB; z += 2) { const px = X(z), py = Y(xs(z)); if (z === zA) x.moveTo(px, py); else x.lineTo(px, py); } x.stroke();
     STOP.forEach((S, k) => { x.fillStyle = pull(k, t) > .5 ? C.acc : C.ink; x.fillRect(X(S.b[2]) - 2.5, Y(S.b[0]) - 2.5, 5, 5); });
+    x.fillStyle = C.acc; x.beginPath(); x.arc(X(ZSP), Y(SPARK[0]), 3.5, 0, TAU); x.fill();
     const ex = X(cam.E[2]), ey = Y(cam.E[0]); x.fillStyle = C.acc; x.fillRect(ex - 3, ey - 3, 6, 6);
     const fx = cam.f[2] * (w - 16) / (zB - zA), fy = -cam.f[0] * 2.2, fl = Math.hypot(fx, fy) || 1;
     x.globalAlpha = .6; x.strokeStyle = C.acc; x.beginPath(); x.moveTo(ex, ey); x.lineTo(ex + fx / fl * 16, ey + fy / fl * 16); x.stroke();
+  }
+
+  /* ----- the home page's air: blocks adrift, lines of pixels running in all directions, glitches ----- */
+  const DRIFT = Array.from({ length: 46 }, () => { const z = -10 + rnd() * (ZEND + 10), sd = rnd() < .5 ? -1 : 1; return { p: [xs(z) + sd * (3 + rnd() * 22), 2.5 + rnd() * 13, z], h: .2 + rnd() * .55, w: [rnd() - .5, rnd() - .5, rnd() - .5], ph: rnd() * 9, c: rnd() < .25 ? 'acc' : rnd() < .3 ? 'glB' : 'ink2' }; });
+  const STREAMS = Array.from({ length: 58 }, () => {
+    const z = -10 + rnd() * (ZEND + 10), sd = rnd() < .5 ? -1 : 1, kind = rnd();
+    const d = kind < .4 ? [0, -1, 0] : kind < .6 ? [0, 1, 0] : kind < .8 ? [0, 0, 1] : [sd, 0, 0];
+    return { o: [xs(z) + sd * (2.5 + rnd() * 26), rnd() * 14, z], d, v: 1.5 + rnd() * 4, n: 5 + (rnd() * 10 | 0), len: 10 + rnd() * 10, ph: rnd() * 20, c: rnd() < .3 ? 'acc' : rnd() < .5 ? 'glB' : 'ink2' };
+  });
+  const rot3 = (v, w, a) => { const k = unit(w), c = Math.cos(a), s2 = Math.sin(a), d = dot(k, v); return add(add(mul(v, c), mul(cross(k, v), s2)), mul(k, d * (1 - c))); };
+  function driftParts(time) {                                               // the adrift blocks, as meshes for the painter's sort
+    const out = [];
+    DRIFT.forEach(b => {
+      const c = add(b.p, [0, Math.sin(time * .6 + b.ph) * .4, 0]), a = (still.matches ? 0 : time) * .5 + b.ph;
+      const V = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]].map(v => add(c, rot3(mul(v, b.h), b.w, a)));
+      const F = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [2, 3, 7, 6], [1, 2, 6, 5], [0, 4, 7, 3]].map(ix => { const pts = ix.map(i => V[i]); let n = unit(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0]))); if (dot(n, sub(pts[0], c)) < 0) n = mul(n, -1); return { pts, n, col: PAL.black, edge: b.c, ea: .9 }; });
+      out.push({ F, L: [], c, r: b.h * 1.8 });
+    });
+    return out;
+  }
+  function streams(time) {
+    const tm = still.matches ? 0 : time;
+    STREAMS.forEach(s2 => {
+      const head = ((tm * s2.v + s2.ph) % (s2.len + 6)) - 3, col2 = C[s2.c];
+      for (let m = 0; m < s2.n; m++) {
+        const q = head - m * .45; if (q < 0 || q > s2.len) continue;
+        const p = pj(add(s2.o, mul(s2.d, q))); if (!p || p[2] > 110) continue;
+        const sz = Math.max(1.2, Math.min(5, 4.5 * 8 / p[2])); x.globalAlpha = (1 - m / s2.n) * (1 - sm(60, 110, p[2])) * .85; x.fillStyle = m ? col2 : C.ink; x.fillRect(p[0] - sz / 2, p[1] - sz / 2, sz, sz);
+      }
+    });
+  }
+  const hsh = (a, b) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  let glitchObj = null;
+  function glitchState(time) {                                              // a short burst every couple of seconds
+    const slot = Math.floor(time / 1.7), u = time - slot * 1.7, on = !still.matches && u < .22;
+    glitchObj = on ? slot : null;
+    return on ? { slot, f: (time * 24) | 0 } : null;
+  }
+  function tearRows(G) {                                                    // torn rows with a red/cyan split, and a few displaced blocks
+    for (let n = 0; n < 5; n++) {
+      const y = (.18 + .64 * hsh(n, G.slot)) * H, h = 3 + hsh(n + 9, G.f) * 26, dx = (hsh(n + 20, G.f) - .5) * 70;
+      x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.drawImage(cvR, 0, y * dpr, cvR.width, h * dpr, dx * dpr, y * dpr, cvR.width, h * dpr); x.restore();
+      x.globalAlpha = .7; x.fillStyle = n % 2 ? C.glA : C.glB; x.fillRect(hsh(n + 31, G.f) * W * .7, y + h, W * .25 * hsh(n + 40, G.f), 2);
+    }
+    for (let n = 0; n < 4; n++) {
+      const bw = 20 + hsh(n + 50, G.slot) * 90, bh = 8 + hsh(n + 60, G.slot) * 40, bx = hsh(n + 70, G.slot) * (W - bw), by = (.2 + .6 * hsh(n + 80, G.slot)) * H, ox = (hsh(n + 90, G.f) - .5) * 40;
+      x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(cvR, bx * dpr, by * dpr, bw * dpr, bh * dpr, (bx + ox) * dpr, by * dpr, bw * dpr, bh * dpr); x.restore();
+    }
+  }
+  let PAT = null;
+  function pat() {                                                          // the digital texture laid over the meshes: a pixel grid with a scan line
+    if (PAT) return PAT;
+    const c = document.createElement('canvas'); c.width = c.height = 4; const q = c.getContext('2d');
+    q.fillStyle = 'rgba(0,0,0,.55)'; q.fillRect(0, 0, 1, 1); q.fillRect(2, 2, 1, 1); q.fillStyle = 'rgba(255,255,255,.22)'; q.fillRect(0, 3, 4, 1);
+    return (PAT = x.createPattern(c, 'repeat'));
   }
 
   /* ----- scroll, warp, loop ----- */
@@ -3464,7 +3579,10 @@ const run = (() => {
   const tOf = () => { const r = sec.getBoundingClientRect(), top = hdr.getBoundingClientRect().bottom; return cl((top - r.top) / Math.max(1, span())) * T; };
   function size() {
     dpr = Math.min(2, devicePixelRatio || 1); W = box.clientWidth; H = box.clientHeight;
-    cvR.width = Math.round(W * dpr); cvR.height = Math.round(H * dpr); kick();
+    cvR.width = Math.round(W * dpr); cvR.height = Math.round(H * dpr);
+    const pw = W < 760 || W < H ? Math.round(W * .88) : Math.round(cl(W * .29, 300, 470));
+    panels.forEach(el => { el.style.width = pw + 'px'; });
+    keys(); kick();
   }
   function frame(now) {
     raf = 0;
@@ -3476,19 +3594,26 @@ const run = (() => {
     x.setTransform(dpr, 0, 0, dpr, 0, 0); x.globalAlpha = 1; x.fillStyle = C.ground; x.fillRect(0, 0, W, H);
     const dist = tNow < 1 ? 260 : 150, time = now / 1000;
     sky(dist); road(tNow, time);
+    const GL = glitchState(time);
+    if (GL) { const bk = hsh(GL.slot, 7) * N | 0; BLD.forEach((b, k) => b.parts.forEach(p => p.F.forEach(f => { f.g = k === bk ? GL.slot : null; }))); }
     const objs = [];
     BLD.forEach(b => objs.push(...b.parts));
     FILL.forEach(b => { const c = toC(b.c); if (c[2] > -14 && c[2] < dist + 10) objs.push(...b.parts); });
+    objs.push(...driftParts(time));
     drawParts(objs, dist);
-    extras(time);
+    extras(time); streams(time); spark(tNow, time);
+    if (GL) tearRows(GL);
+    x.globalAlpha = .045; x.fillStyle = C.ink; for (let y = 0; y < H; y += 3) x.fillRect(0, y, W, 1);   // faint scan lines over everything
     let best = -1, bw = 0;
-    STOP.forEach((S, k) => { const a = pull(k, tNow); glass(k, sm(.05, .6, a)); if (a > bw) { bw = a; best = k; } });
-    const near = bw > .5 ? best : -1;
+    STOP.forEach((S, k) => { const a = pull(k, tNow); glass(k, sm(.05, .6, a), time); if (a > bw) { bw = a; best = k; } });
+    const near = sparkW(tNow) > .5 ? N : bw > .5 ? best : -1;
     if (near !== active) {
       active = near;
       ticks.forEach((b, i) => { if (i === active) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
       hudN.textContent = active < 0 ? '—' : '0' + (active + 1) + ' / 0' + N;
-      if (active < 0) { hudT.dataset.i18n = 'run.k'; hudT.textContent = tr('run.k'); } else { hudT.removeAttribute('data-i18n'); hudT.textContent = panels[active].querySelector('h3').textContent; }
+      hudN.textContent = active < 0 ? '—' : active === N ? '∞' : '0' + (active + 1) + ' / 0' + N;
+      if (active < 0 || active === N) { const key = active === N ? 'run.sp' : 'run.k'; hudT.dataset.i18n = key; hudT.textContent = tr(key); }
+      else { hudT.removeAttribute('data-i18n'); hudT.textContent = panels[active].querySelector('h3').textContent; }
     }
     if (W > 520) minimap(tNow);
     const ws = Math.max(warp, cl((vel - 1.5) / 6));                          // speed lines while warping or scrolling fast
@@ -3504,13 +3629,13 @@ const run = (() => {
   }
   function kick() { if (!raf && onScreen) { last = performance.now(); raf = requestAnimationFrame(frame); } }
   function warpTo(k) {                                                      // fly to stop k: an eased scroll with speed lines
-    const goal = sec.getBoundingClientRect().top + scrollY - hdr.getBoundingClientRect().bottom + (TK[k] / T) * span(), from = scrollY;
+    const goal = sec.getBoundingClientRect().top + scrollY - hdr.getBoundingClientRect().bottom + ((k >= N ? T : TK[k]) / T) * span(), from = scrollY;
     if (still.matches) { scrollTo({ top: goal, behavior: 'instant' }); return; }
     const t0 = performance.now(), dur = Math.min(1900, 700 + Math.abs(goal - from) / 6);
     const step = now => {
       const u = cl((now - t0) / dur); scrollTo({ top: mix(from, goal, eio(u)), behavior: 'instant' });
       warp = Math.sin(u * Math.PI); kick();
-      if (u < 1) requestAnimationFrame(step); else { warp = 0; panels[k].focus({ preventScroll: true }); }
+      if (u < 1) requestAnimationFrame(step); else { warp = 0; if (panels[k]) panels[k].focus({ preventScroll: true }); }
     };
     requestAnimationFrame(step);
   }
